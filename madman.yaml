@@ -1,0 +1,7 @@
+server:
+  ssh_user: sadeep
+  server: vps.example.com
+
+project:
+  project_id: myproj
+  git_project_ssh_uri: https://github.com/sadeep/myproj.git

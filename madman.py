@@ -99,14 +99,43 @@ def run_server_deploy(args):
             error(f"{project_path} exists but is not a git repository.")
             sys.exit(1)
 
+        # Sanity check 1: remote URL matches
+        result = subprocess.run(["git", "config", "--get", "remote.origin.url"], cwd=project_path, capture_output=True, text=True)
+        expected_url = f"{git_user}/{git_repo}.git"
+        if result.returncode != 0 or result.stdout.strip() != expected_url:
+            error(f"Remote origin URL mismatch. Expected '{expected_url}', got '{result.stdout.strip()}'.")
+            sys.exit(1)
+
+        # Sanity check 2: branch exists on origin
+        result = subprocess.run(["git", "show-ref", f"refs/remotes/origin/{git_branch}"], cwd=project_path)
+        if result.returncode != 0:
+            error(f"Branch 'origin/{git_branch}' not found.")
+            sys.exit(1)
+
         info(f"Pulling latest changes in {project_path}...")
         subprocess.run(["git", "fetch", "origin"], cwd=project_path, check=True)
         subprocess.run(["git", "reset", "--hard", f"origin/{git_branch}"], cwd=project_path, check=True)
         success("Pull and reset completed.")
 
+def run_server_status(args):
+    if len(args) != 1:
+        error("Usage: status-server <project_id>")
+        sys.exit(1)
+
+    project_id = args[0]
+    project_path = os.path.join(os.path.expanduser("~"), "madman", "projects", project_id)
+    if not os.path.isdir(project_path):
+        error(f"Project '{project_id}' not found at {project_path}.")
+        sys.exit(1)
+
+    info(f"Status for project: {project_id}")
+    subprocess.run(["git", "remote", "get-url", "origin"], cwd=project_path)
+    subprocess.run(["git", "branch", "--show-current"], cwd=project_path)
+    subprocess.run(["git", "log", "-1", "--oneline"], cwd=project_path)
+
 def main():
     parser = argparse.ArgumentParser(description="Madman deployment tool")
-    parser.add_argument("command", help="Command to run: deploy or deploy-server")
+    parser.add_argument("command", help="Command to run: deploy, deploy-server, or status-server")
     parser.add_argument("args", nargs=argparse.REMAINDER)
     parsed = parser.parse_args()
 
@@ -114,6 +143,8 @@ def main():
         run_client_deploy()
     elif parsed.command == "deploy-server":
         run_server_deploy(parsed.args)
+    elif parsed.command == "status-server":
+        run_server_status(parsed.args)
     else:
         error(f"Unknown command: {parsed.command}")
         sys.exit(1)

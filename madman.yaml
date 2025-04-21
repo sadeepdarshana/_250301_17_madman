@@ -3,5 +3,7 @@ server:
   server: vps.example.com
 
 project:
-  project_id: myproj
-  git_ssh_uri: https://github.com/sadeep/myproj.git
+  id: myproj
+  ssh_git_user: git@github.com:sadeepdarshana
+  ssh_git_repo: _250217_09_machine_configs
+  ssh_git_branch: main

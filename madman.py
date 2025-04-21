@@ -86,7 +86,7 @@ def _ssh_run(ssh_user: str, host: str, remote_cmd: str) -> int:
         return 1
 
 
-def client_deploy() -> None:
+def client_pull() -> None:
     cfg = load_config()
     try:
         srv = cfg["server"]
@@ -101,7 +101,7 @@ def client_deploy() -> None:
         sys.exit(1)
 
     remote_cmd = (
-        "python3 ~/madman/madman.py deploy-server "
+        "python3 ~/madman/madman.py pull-server "
         f"{project_id} {git_user} {git_repo} {git_branch}"
     )
     sys.exit(_ssh_run(ssh_user, host, remote_cmd))
@@ -126,10 +126,10 @@ def client_status() -> None:
 # Server‑side helpers (executed on the VPS)
 # ---------------------------------------------------------------------------
 
-def server_deploy(args):
+def server_pull(args):
     if len(args) != 4:
         error(
-            "Usage: deploy-server <project_id> <ssh_git_user> <ssh_git_repo> <ssh_git_branch>"
+            "Usage: pull-server <project_id> <ssh_git_user> <ssh_git_repo> <ssh_git_branch>"
         )
         sys.exit(1)
 
@@ -210,18 +210,18 @@ def main():
     parser = argparse.ArgumentParser(description="Madman deployment tool")
     parser.add_argument(
         "command",
-        help="deploy | status | deploy-server | status-server",
+        help="pull | status | pull-server | status-server",
     )
     parser.add_argument("args", nargs=argparse.REMAINDER)
     opts = parser.parse_args()
 
     cmd = opts.command
-    if cmd == "deploy":
-        client_deploy()
+    if cmd == "pull":
+        client_pull()
     elif cmd == "status":
         client_status()
-    elif cmd == "deploy-server":
-        server_deploy(opts.args)
+    elif cmd == "pull-server":
+        server_pull(opts.args)
     elif cmd == "status-server":
         server_status(opts.args)
     else:

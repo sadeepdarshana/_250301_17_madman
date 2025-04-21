@@ -95,7 +95,7 @@ def client_pull(project_id_override: str | None) -> None:
 
     # Quick path: only project ID provided.
     if project_id_override:
-        remote_cmd = f"python3 ~/madman/madman.py pull-server-id {project_id_override}"
+        remote_cmd = f"python3 ~/madman/madman.py pull-server {project_id_override}"
         sys.exit(_ssh_run(ssh_user, host, remote_cmd))
 
     # Full path: need git details from YAML.
@@ -139,48 +139,55 @@ def _proj_path(project_id: str) -> str:
 
 
 def server_pull(args: list[str]) -> None:
-    if len(args) != 4:
-        error("Usage: pull-server <id> <git_user> <git_repo> <branch>")
+    """Unified pull: 4 args → first‑time/forced clone; 1 arg → existing repo.
+    Args layouts:
+      [id, git_user, git_repo, branch]
+      [id]
+    Always ends with fetch + hard reset so working tree matches origin/<branch>.
+    """
+    if len(args) not in (1, 4):
+        error("Usage: pull-server <project_id> [<ssh_git_user> <ssh_git_repo> <branch>]")
         sys.exit(1)
 
-    project_id, git_user, git_repo, branch = args
-    repo_url = f"{git_user}/{git_repo}.git"
+    project_id = args[0]
     path = _proj_path(project_id)
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
-    if not os.path.exists(path):
-        info(f"Cloning into {path} …")
-        subprocess.run(["git", "clone", "-b", branch, repo_url, path], check=True)
-        success("Clone completed.")
-        return
+    if len(args) == 4:
+        _, git_user, git_repo, branch = args
+        repo_url = f"{git_user}/{git_repo}.git"
+        if not os.path.exists(path):
+            info(f"Cloning into {path} …")
+            subprocess.run(["git", "clone", "-b", branch, repo_url, path], check=True)
+            success("Clone completed.")
+        else:
+            if not os.path.isdir(os.path.join(path, ".git")):
+                error(f"{path} exists but is not a git repo.")
+                sys.exit(1)
+            ru = subprocess.check_output(["git", "config", "--get", "remote.origin.url"], cwd=path, text=True).strip()
+            if ru != repo_url:
+                error(f"Remote URL mismatch: {ru} != {repo_url}")
+                sys.exit(1)
+            if subprocess.run(["git", "show-ref", f"refs/remotes/origin/{branch}"], cwd=path).returncode != 0:
+                error(f"origin/{branch} not found")
+                sys.exit(1)
+    else:
+        # Only ID; repo must exist.
+        if not os.path.isdir(os.path.join(path, ".git")):
+            error(f"{path} is not a git repo. Provide Git info for first clone.")
+            sys.exit(1)
+        # get current branch
+        branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=path, text=True).strip()
+        if not branch:
+            error("Could not determine current branch.")
+            sys.exit(1)
 
-    if not os.path.isdir(os.path.join(path, ".git")):
-        error(f"{path} exists but is not a git repo.")
-        sys.exit(1)
-
-    # Sanity: remote URL matches & branch exists
-    ru = subprocess.check_output(["git", "config", "--get", "remote.origin.url"], cwd=path, text=True).strip()
-    if ru != repo_url:
-        error(f"Remote URL mismatch: {ru} != {repo_url}")
-        sys.exit(1)
-    if subprocess.run(["git", "show-ref", f"refs/remotes/origin/{branch}"], cwd=path).returncode != 0:
-        error(f"origin/{branch} not found")
-        sys.exit(1)
-
-    info("Fetching & resetting …")
+    info(f"Synchronising with origin/{branch} …")
     subprocess.run(["git", "fetch", "origin"], cwd=path, check=True)
     subprocess.run(["git", "reset", "--hard", f"origin/{branch}"], cwd=path, check=True)
     success("Repo updated successfully.")
 
 
-def server_pull_existing(project_id: str) -> None:
-    path = _proj_path(project_id)
-    if not os.path.isdir(os.path.join(path, ".git")):
-        error(f"{path} is not a git repo.")
-        sys.exit(1)
-    info("Pulling latest …")
-    subprocess.run(["git", "pull"], cwd=path, check=True)
-    success("Repo updated successfully.")
 
 
 def server_status(args: list[str]) -> None:
@@ -215,13 +222,8 @@ def main() -> None:
         client_status()
     elif cmd == "pull-server":
         server_pull(opts.args)
-    elif cmd == "pull-server-id":
-        if len(opts.args) != 1:
-            error("Usage: pull-server-id <project_id>")
-            sys.exit(1)
-        server_pull_existing(opts.args[0])
     elif cmd == "status-server":
-        server_status(opts.args)
+        server_status(opts.args)(opts.args)
     else:
         error(f"Unknown command '{cmd}'")
         sys.exit(1)
@@ -229,3 +231,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

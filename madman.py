@@ -180,11 +180,6 @@ def server_pull(args: List[str]) -> None:
             if ru != repo_url:
                 error(f"Remote URL mismatch: {ru} != {repo_url}")
                 sys.exit(1)
-            if subprocess.run([
-                "git", "show-ref", f"refs/remotes/origin/{branch}"], cwd=repo_path
-            ).returncode != 0:
-                error(f"origin/{branch} not found")
-                sys.exit(1)
     else:
         if not os.path.isdir(os.path.join(repo_path, ".git")):
             error(f"{repo_path} is not a git repo. Provide Git info for first clone.")

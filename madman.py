@@ -210,7 +210,7 @@ def server_status(args: list[str]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Madman helper")
-    parser.add_argument("command", help="pull | status | pull-server | pull-server-id | status-server")
+    parser.add_argument("command", help="pull | status | pull-server | status-server")
     parser.add_argument("args", nargs=argparse.REMAINDER)
     opts = parser.parse_args()
 
@@ -223,10 +223,7 @@ def main() -> None:
     elif cmd == "pull-server":
         server_pull(opts.args)
     elif cmd == "status-server":
-        server_status(opts.args)(opts.args)
-    else:
-        error(f"Unknown command '{cmd}'")
-        sys.exit(1)
+        server_status(opts.args)
 
 
 if __name__ == "__main__":

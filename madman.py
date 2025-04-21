@@ -31,6 +31,6 @@ def load_config_yaml() -> Dict:
 
 # Example usage
 if __name__ == '__main__':
-    config = load_config_yaml()
+    madman_config = load_config_yaml()
     print("Effective config:")
-    print(config)
+    print(madman_config)

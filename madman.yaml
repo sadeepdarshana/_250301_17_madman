@@ -4,4 +4,4 @@ server:
 
 project:
   project_id: myproj
-  git_project_ssh_uri: https://github.com/sadeep/myproj.git
+  git_ssh_uri: https://github.com/sadeep/myproj.git

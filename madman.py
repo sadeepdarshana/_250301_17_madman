@@ -5,6 +5,25 @@ import subprocess
 import argparse
 from typing import Dict
 
+RESET = "\033[0m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+RED = "\033[91m"
+BLUE = "\033[94m"
+
+
+def info(msg):
+    print(f"{BLUE}[INFO]{RESET} {msg}")
+
+def success(msg):
+    print(f"{GREEN}[OK]{RESET} {msg}")
+
+def warn(msg):
+    print(f"{YELLOW}[WARN]{RESET} {msg}")
+
+def error(msg):
+    print(f"{RED}[ERROR]{RESET} {msg}", file=sys.stderr)
+
 def load_yaml_config(path: str) -> Dict:
     if os.path.exists(path):
         with open(path, 'r') as f:
@@ -42,24 +61,24 @@ def run_client_deploy():
         git_repo = project['ssh_git_repo']
         git_branch = project['ssh_git_branch']
     except KeyError as e:
-        print(f"Missing required config field: {e}", file=sys.stderr)
+        error(f"Missing required config field: {e}")
         sys.exit(1)
 
     ssh_target = f"{ssh_user}@{host}"
     remote_cmd = f"python3 ~/madman/madman.py deploy-server {project_id} {git_user} {git_repo} {git_branch}"
     full_cmd = ["ssh", ssh_target, remote_cmd]
 
-    print(f"Running remote deployment on {ssh_target}...\n")
+    info(f"Running remote deployment on {ssh_target}...\n")
     try:
         result = subprocess.run(full_cmd)
         sys.exit(result.returncode)
     except Exception as e:
-        print(f"Failed to run SSH command: {e}", file=sys.stderr)
+        error(f"Failed to run SSH command: {e}")
         sys.exit(1)
 
 def run_server_deploy(args):
     if len(args) != 4:
-        print("Usage: deploy-server <project_id> <ssh_git_user> <ssh_git_repo> <ssh_git_branch>", file=sys.stderr)
+        error("Usage: deploy-server <project_id> <ssh_git_user> <ssh_git_repo> <ssh_git_branch>")
         sys.exit(1)
 
     project_id, git_user, git_repo, git_branch = args
@@ -70,18 +89,20 @@ def run_server_deploy(args):
     os.makedirs(project_root, exist_ok=True)
 
     if not os.path.exists(project_path):
-        print(f"Cloning repository into {project_path}...")
+        info(f"Cloning repository into {project_path}...")
         repo_url = f"{git_user}/{git_repo}.git"
         subprocess.run(["git", "clone", "-b", git_branch, repo_url, project_path], check=True)
+        success("Clone completed.")
     else:
         git_dir = os.path.join(project_path, ".git")
         if not os.path.isdir(git_dir):
-            print(f"Error: {project_path} exists but is not a git repository.", file=sys.stderr)
+            error(f"{project_path} exists but is not a git repository.")
             sys.exit(1)
 
-        print(f"Pulling latest changes in {project_path}...")
+        info(f"Pulling latest changes in {project_path}...")
         subprocess.run(["git", "fetch", "origin"], cwd=project_path, check=True)
         subprocess.run(["git", "reset", "--hard", f"origin/{git_branch}"], cwd=project_path, check=True)
+        success("Pull and reset completed.")
 
 def main():
     parser = argparse.ArgumentParser(description="Madman deployment tool")
@@ -94,7 +115,7 @@ def main():
     elif parsed.command == "deploy-server":
         run_server_deploy(parsed.args)
     else:
-        print(f"Unknown command: {parsed.command}", file=sys.stderr)
+        error(f"Unknown command: {parsed.command}")
         sys.exit(1)
 
 if __name__ == '__main__':

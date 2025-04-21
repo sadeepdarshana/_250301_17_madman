@@ -71,7 +71,7 @@ def run_server_deploy(args):
 
     if not os.path.exists(project_path):
         print(f"Cloning repository into {project_path}...")
-        repo_url = f"{git_user}:{git_repo}.git"
+        repo_url = f"{git_user}/{git_repo}.git"
         subprocess.run(["git", "clone", "-b", git_branch, repo_url, project_path], check=True)
     else:
         git_dir = os.path.join(project_path, ".git")

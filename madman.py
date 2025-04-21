@@ -1,10 +1,14 @@
 import os
 import sys
-import yaml
 import subprocess
 import argparse
 from typing import Dict
 
+import yaml
+
+# ---------------------------------------------------------------------------
+# Styling helpers (ANSI colours)
+# ---------------------------------------------------------------------------
 RESET = "\033[0m"
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
@@ -12,142 +16,218 @@ RED = "\033[91m"
 BLUE = "\033[94m"
 
 
-def info(msg):
-    print(f"{BLUE}[INFO]{RESET} {msg}")
+def _print(tag: str, colour: str, msg: str, file=sys.stdout):
+    print(f"{colour}[{tag}]{RESET} {msg}", file=file)
 
-def success(msg):
-    print(f"{GREEN}[OK]{RESET} {msg}")
 
-def warn(msg):
-    print(f"{YELLOW}[WARN]{RESET} {msg}")
+def info(msg: str):
+    _print("INFO", BLUE, msg)
 
-def error(msg):
-    print(f"{RED}[ERROR]{RESET} {msg}", file=sys.stderr)
 
-def load_yaml_config(path: str) -> Dict:
+def success(msg: str):
+    _print("OK", GREEN, msg)
+
+
+def warn(msg: str):
+    _print("WARN", YELLOW, msg)
+
+
+def error(msg: str):
+    _print("ERROR", RED, msg, file=sys.stderr)
+
+
+# ---------------------------------------------------------------------------
+# YAML configuration helpers
+# ---------------------------------------------------------------------------
+
+def _load_yaml(path: str) -> Dict:
+    """Return parsed YAML or empty dict if the file does not exist."""
     if os.path.exists(path):
-        with open(path, 'r') as f:
-            return yaml.safe_load(f) or {}
+        with open(path, "r", encoding="utf-8") as fh:
+            return yaml.safe_load(fh) or {}
     return {}
 
-def merge_configs(base: Dict, override: Dict) -> Dict:
-    result = base.copy()
-    for key, value in override.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = merge_configs(result[key], value)
+
+def _deep_merge(base: Dict, override: Dict) -> Dict:
+    """Recursively merge *override* into *base* (override wins)."""
+    merged = base.copy()
+    for key, val in override.items():
+        if (
+                key in merged
+                and isinstance(merged[key], dict)
+                and isinstance(val, dict)
+        ):
+            merged[key] = _deep_merge(merged[key], val)
         else:
-            result[key] = value
-    return result
+            merged[key] = val
+    return merged
 
-def load_config_yaml() -> Dict:
-    system_config_path = os.path.expanduser('~/madman.yaml')
-    project_config_path = './madman.yaml'
 
-    system_config = load_yaml_config(system_config_path)
-    project_config = load_yaml_config(project_config_path)
+def load_config() -> Dict:
+    """Merge system‑level and project‑level madman.yaml files."""
+    system_cfg = _load_yaml(os.path.expanduser("~/madman.yaml"))
+    project_cfg = _load_yaml("./madman.yaml")
+    return _deep_merge(system_cfg, project_cfg)
 
-    config = merge_configs(system_config, project_config)
-    return config
 
-def run_client_deploy():
-    config = load_config_yaml()
+# ---------------------------------------------------------------------------
+# Client‑side helpers (called from developer laptop)
+# ---------------------------------------------------------------------------
 
+def _ssh_run(ssh_user: str, host: str, remote_cmd: str) -> int:
+    """Run *remote_cmd* on *ssh_user@host* and stream output."""
+    target = f"{ssh_user}@{host}"
+    cmd = ["ssh", target, remote_cmd]
+    info(f"Running remote command on {target}: {remote_cmd}")
     try:
-        ssh_user = config['server']['ssh_user']
-        host = config['server']['host']
-        project = config['project']
-        project_id = project['id']
-        git_user = project['ssh_git_user']
-        git_repo = project['ssh_git_repo']
-        git_branch = project['ssh_git_branch']
-    except KeyError as e:
-        error(f"Missing required config field: {e}")
+        return subprocess.run(cmd).returncode
+    except Exception as exc:
+        error(f"SSH execution failed: {exc}")
+        return 1
+
+
+def client_deploy() -> None:
+    cfg = load_config()
+    try:
+        srv = cfg["server"]
+        proj = cfg["project"]
+        ssh_user, host = srv["ssh_user"], srv["host"]
+        project_id = proj["id"]
+        git_user = proj["ssh_git_user"]
+        git_repo = proj["ssh_git_repo"]
+        git_branch = proj["ssh_git_branch"]
+    except KeyError as missing:
+        error(f"Missing required config key: {missing}")
         sys.exit(1)
 
-    ssh_target = f"{ssh_user}@{host}"
-    remote_cmd = f"python3 ~/madman/madman.py deploy-server {project_id} {git_user} {git_repo} {git_branch}"
-    full_cmd = ["ssh", ssh_target, remote_cmd]
+    remote_cmd = (
+        "python3 ~/madman/madman.py deploy-server "
+        f"{project_id} {git_user} {git_repo} {git_branch}"
+    )
+    sys.exit(_ssh_run(ssh_user, host, remote_cmd))
 
-    info(f"Running remote deployment on {ssh_target}...\n")
+
+def client_status() -> None:
+    cfg = load_config()
     try:
-        result = subprocess.run(full_cmd)
-        sys.exit(result.returncode)
-    except Exception as e:
-        error(f"Failed to run SSH command: {e}")
+        srv = cfg["server"]
+        proj = cfg["project"]
+        ssh_user, host = srv["ssh_user"], srv["host"]
+        project_id = proj["id"]
+    except KeyError as missing:
+        error(f"Missing required config key: {missing}")
         sys.exit(1)
 
-def run_server_deploy(args):
+    remote_cmd = f"python3 ~/madman/madman.py status-server {project_id}"
+    sys.exit(_ssh_run(ssh_user, host, remote_cmd))
+
+
+# ---------------------------------------------------------------------------
+# Server‑side helpers (executed on the VPS)
+# ---------------------------------------------------------------------------
+
+def server_deploy(args):
     if len(args) != 4:
-        error("Usage: deploy-server <project_id> <ssh_git_user> <ssh_git_repo> <ssh_git_branch>")
+        error(
+            "Usage: deploy-server <project_id> <ssh_git_user> <ssh_git_repo> <ssh_git_branch>"
+        )
         sys.exit(1)
 
     project_id, git_user, git_repo, git_branch = args
     home = os.path.expanduser("~")
-    project_root = os.path.join(home, "madman", "projects")
-    project_path = os.path.join(project_root, project_id)
+    proj_root = os.path.join(home, "madman", "projects")
+    proj_path = os.path.join(proj_root, project_id)
 
-    os.makedirs(project_root, exist_ok=True)
+    os.makedirs(proj_root, exist_ok=True)
+    repo_url = f"{git_user}/{git_repo}.git"
 
-    if not os.path.exists(project_path):
-        info(f"Cloning repository into {project_path}...")
-        repo_url = f"{git_user}/{git_repo}.git"
-        subprocess.run(["git", "clone", "-b", git_branch, repo_url, project_path], check=True)
+    if not os.path.exists(proj_path):
+        info(f"Cloning repository into {proj_path}...")
+        subprocess.run(["git", "clone", "-b", git_branch, repo_url, proj_path], check=True)
         success("Clone completed.")
     else:
-        git_dir = os.path.join(project_path, ".git")
-        if not os.path.isdir(git_dir):
-            error(f"{project_path} exists but is not a git repository.")
+        if not os.path.isdir(os.path.join(proj_path, ".git")):
+            error(f"{proj_path} exists but is not a Git repository.")
             sys.exit(1)
 
-        # Sanity check 1: remote URL matches
-        result = subprocess.run(["git", "config", "--get", "remote.origin.url"], cwd=project_path, capture_output=True, text=True)
-        expected_url = f"{git_user}/{git_repo}.git"
-        if result.returncode != 0 or result.stdout.strip() != expected_url:
-            error(f"Remote origin URL mismatch. Expected '{expected_url}', got '{result.stdout.strip()}'.")
+        # --- Sanity checks ---------------------------------------------------
+        result = subprocess.run(
+            ["git", "config", "--get", "remote.origin.url"],
+            cwd=proj_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0 or result.stdout.strip() != repo_url:
+            error(
+                "Remote origin URL mismatch. "
+                f"Expected '{repo_url}', got '{result.stdout.strip()}'."
+            )
             sys.exit(1)
 
-        # Sanity check 2: branch exists on origin
-        result = subprocess.run(["git", "show-ref", f"refs/remotes/origin/{git_branch}"], cwd=project_path)
+        result = subprocess.run(
+            ["git", "show-ref", f"refs/remotes/origin/{git_branch}"],
+            cwd=proj_path,
+            check=False,
+        )
         if result.returncode != 0:
             error(f"Branch 'origin/{git_branch}' not found.")
             sys.exit(1)
+        # --------------------------------------------------------------------
 
-        info(f"Pulling latest changes in {project_path}...")
-        subprocess.run(["git", "fetch", "origin"], cwd=project_path, check=True)
-        subprocess.run(["git", "reset", "--hard", f"origin/{git_branch}"], cwd=project_path, check=True)
-        success("Pull and reset completed.")
+        info("Pulling latest changes…")
+        subprocess.run(["git", "fetch", "origin"], cwd=proj_path, check=True)
+        subprocess.run(
+            ["git", "reset", "--hard", f"origin/{git_branch}"],
+            cwd=proj_path,
+            check=True,
+        )
+        success("Repo updated successfully.")
 
-def run_server_status(args):
+
+def server_status(args):
     if len(args) != 1:
         error("Usage: status-server <project_id>")
         sys.exit(1)
 
     project_id = args[0]
-    project_path = os.path.join(os.path.expanduser("~"), "madman", "projects", project_id)
-    if not os.path.isdir(project_path):
-        error(f"Project '{project_id}' not found at {project_path}.")
+    proj_path = os.path.join(os.path.expanduser("~"), "madman", "projects", project_id)
+    if not os.path.isdir(proj_path):
+        error(f"Project '{project_id}' not found at {proj_path}.")
         sys.exit(1)
 
-    info(f"Status for project: {project_id}")
-    subprocess.run(["git", "remote", "get-url", "origin"], cwd=project_path)
-    subprocess.run(["git", "branch", "--show-current"], cwd=project_path)
-    subprocess.run(["git", "log", "-1", "--oneline"], cwd=project_path)
+    info(f"Status for project '{project_id}':")
+    subprocess.run(["git", "remote", "get-url", "origin"], cwd=proj_path)
+    subprocess.run(["git", "branch", "--show-current"], cwd=proj_path)
+    subprocess.run(["git", "log", "-1", "--oneline"], cwd=proj_path)
+
+
+# ---------------------------------------------------------------------------
+# Entry‑point
+# ---------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="Madman deployment tool")
-    parser.add_argument("command", help="Command to run: deploy, deploy-server, or status-server")
+    parser.add_argument(
+        "command",
+        help="deploy | status | deploy-server | status-server",
+    )
     parser.add_argument("args", nargs=argparse.REMAINDER)
-    parsed = parser.parse_args()
+    opts = parser.parse_args()
 
-    if parsed.command == "deploy":
-        run_client_deploy()
-    elif parsed.command == "deploy-server":
-        run_server_deploy(parsed.args)
-    elif parsed.command == "status-server":
-        run_server_status(parsed.args)
+    cmd = opts.command
+    if cmd == "deploy":
+        client_deploy()
+    elif cmd == "status":
+        client_status()
+    elif cmd == "deploy-server":
+        server_deploy(opts.args)
+    elif cmd == "status-server":
+        server_status(opts.args)
     else:
-        error(f"Unknown command: {parsed.command}")
+        error(f"Unknown command '{cmd}'")
         sys.exit(1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

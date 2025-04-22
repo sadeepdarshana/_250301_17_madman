@@ -14,9 +14,12 @@ GREEN = "\033[92m"
 RED = "\033[91m"
 BLUE = "\033[94m"
 
-# YAML config paths
+# YAML config paths on client
 SYSTEM_CONFIG = Path.home() / "madman.yaml"
 PROJECT_CONFIG = Path("madman.yaml")
+
+# Path to projects on server
+PROJECTS_ROOT = Path.home() / "madman" / "projects"
 
 def print_info(message: str) -> None:
     print(f"{BLUE}[INFO]{RESET} {message}")
@@ -61,9 +64,6 @@ def run_ssh(user: str, host: str, command: str) -> int:
     target = f"{user}@{host}"
     print_info(f"Running on {target}: {command}")
     return subprocess.run(["ssh", target, command]).returncode
-
-# Path to projects
-PROJECTS_ROOT = Path.home() / "madman" / "projects"
 
 # Print latest commit info
 def show_latest(repo_path: Path) -> None:

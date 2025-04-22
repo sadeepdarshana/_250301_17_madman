@@ -78,7 +78,7 @@ def show_latest(repo_path: Path) -> None:
 def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
     project = cfg.get("project") or {}
     try:
-        return project["id"], project["ssh_git_user"], project["ssh_git_repo"], project["ssh_git_branch"]
+        return project["id"], project["ssh_git_user"], project["git_repo"], project["git_branch"]
     except KeyError as e:
         print_error(f"Missing project config key: {e}")
 
@@ -136,7 +136,7 @@ def server_clone(args: List[str]) -> None:
 # Server-side: pull-server
 def server_pull(args: List[str]) -> None:
     if len(args) not in (1, 4):
-        print_error("Usage: pull-server <project_id> [ssh_git_user ssh_git_repo ssh_git_branch]")
+        print_error("Usage: pull-server <project_id> [ssh_git_user git_repo git_branch]")
 
     pid = args[0]
     repo_path = PROJECTS_ROOT / pid

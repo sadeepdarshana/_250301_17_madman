@@ -93,12 +93,12 @@ def client_clone() -> None:
     sys.exit(run_ssh(user, host, cmd))
 
 # Client-side: pull
-def client_pull(project_override: str | None) -> None:
+def client_pull(project_id_override: str | None) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
 
-    if project_override:
-        cmd = f"python3 ~/madman/madman.py pull-server {project_override}"
+    if project_id_override:
+        cmd = f"python3 ~/madman/madman.py pull-server {project_id_override}"
         sys.exit(run_ssh(user, host, cmd))
 
     pid, git_user, git_repo, git_branch = get_project_credentials(cfg)
@@ -107,11 +107,11 @@ def client_pull(project_override: str | None) -> None:
     sys.exit(run_ssh(user, host, cmd))
 
 # Client-side: status
-def client_status(project_override: str | None) -> None:
+def client_status(project_id_override: str | None) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
 
-    pid = project_override or cfg.get("project", {}).get("id")
+    pid = project_id_override or cfg.get("project", {}).get("id")
     if not pid:
         print_error("Project ID not provided and not in project config")
 

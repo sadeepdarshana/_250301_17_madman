@@ -131,6 +131,7 @@ def server_clone(args: List[str]) -> None:
 
     print_info(f"Git URI:  {git_repo}. Branch: {git_branch}")
     subprocess.run(["git", "clone", "-b", git_branch, git_repo, str(repo)], check=True)
+    print_success('Clone successful')
     show_latest(repo)
 
 # Server-side: pull-server

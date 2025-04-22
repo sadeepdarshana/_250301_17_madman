@@ -14,22 +14,20 @@ GREEN = "\033[92m"
 RED = "\033[91m"
 BLUE = "\033[94m"
 
+# YAML config paths
+SYSTEM_CONFIG = Path.home() / "madman.yaml"
+PROJECT_CONFIG = Path("madman.yaml")
 
 def print_info(message: str) -> None:
     print(f"{BLUE}[INFO]{RESET} {message}")
 
-
 def print_success(message: str) -> None:
     print(f"{GREEN}[OK]{RESET} {message}")
-
 
 def print_error(message: str) -> None:
     print(f"{RED}[ERROR]{RESET} {message}", file=sys.stderr)
     sys.exit(1)
 
-# Load YAML config
-SYSTEM_CONFIG = Path.home() / "madman.yaml"
-PROJECT_CONFIG = Path("madman.yaml")
 
 def load_config() -> Dict[str, Any]:
     config: Dict[str, Any] = {}
@@ -68,6 +66,14 @@ def show_latest(repo_path: Path) -> None:
     message = git_cmd("log", "-1", "--pretty=%s")
     print_success(f"branch: {branch} | commit: {commit} | message: {message}")
 
+def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
+    project = cfg.get("project") or {}
+    try:
+        return project["id"], project["ssh_git_user"], project["ssh_git_repo"], project["ssh_git_branch"]
+    except KeyError as e:
+        print_error(f"Missing project config key: {e}")
+        sys.exit(1)
+
 # Client-side: pull
 def client_pull(project_override: str | None) -> None:
     cfg = load_config()
@@ -77,17 +83,9 @@ def client_pull(project_override: str | None) -> None:
         cmd = f"python3 ~/madman/madman.py pull-server {project_override}"
         sys.exit(run_ssh(user, host, cmd))
 
-    project = cfg.get("project") or {}
-    try:
-        pid = project["id"]
-        git_user = project["ssh_git_user"]
-        git_repo = project["ssh_git_repo"]
-        git_branch = project["ssh_git_branch"]
-    except KeyError as e:
-        print_error(f"Missing project config key: {e}")
+    pid, git_user, git_repo, git_branch = get_project_credentials(cfg)
 
-    cmd = (f"python3 ~/madman/madman.py pull-server {pid} "
-           f"{git_user} {git_repo} {git_branch}")
+    cmd = f"python3 ~/madman/madman.py pull-server {pid} {git_user} {git_repo} {git_branch}"
     sys.exit(run_ssh(user, host, cmd))
 
 # Client-side: status

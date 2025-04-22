@@ -29,13 +29,22 @@ def print_error(message: str) -> None:
     sys.exit(1)
 
 
+def deep_merge(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively merge b into a (b wins)."""
+    result = a.copy()
+    for key, val in b.items():
+        if key in result and isinstance(result[key], dict) and isinstance(val, dict):
+            result[key] = deep_merge(result[key], val)
+        else:
+            result[key] = val
+    return result
+
+
 def load_config() -> Dict[str, Any]:
-    config: Dict[str, Any] = {}
-    if SYSTEM_CONFIG.exists():
-        config.update(yaml.safe_load(SYSTEM_CONFIG.read_text()) or {})
-    if PROJECT_CONFIG.exists():
-        config.update(yaml.safe_load(PROJECT_CONFIG.read_text()) or {})
-    return config
+    """Merge system + project YAML with deep override."""
+    sys_cfg = yaml.safe_load(SYSTEM_CONFIG.read_text()) or {} if SYSTEM_CONFIG.exists() else {}
+    proj_cfg = yaml.safe_load(PROJECT_CONFIG.read_text()) or {} if PROJECT_CONFIG.exists() else {}
+    return deep_merge(sys_cfg, proj_cfg)
 
 
 def get_ssh_credentials(cfg: Dict[str, Any]) -> tuple[str, str]:

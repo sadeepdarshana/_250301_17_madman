@@ -73,7 +73,7 @@ def show_latest(repo_path: Path) -> None:
     branch = git_cmd("branch", "--show-current")
     commit = git_cmd("rev-parse", "--short", "HEAD")
     message = git_cmd("log", "-1", "--pretty=%s")
-    print_success(f"branch: {branch} | commit: {commit} | message: {message}")
+    print_info(f"branch: {branch} | commit: {commit} | message: {message}")
 
 def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
     project = cfg.get("project") or {}
@@ -82,51 +82,40 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
     except KeyError as e:
         print_error(f"Missing project config key: {e}")
 
-# Client-side: clone
+
+# Client side commands impl --------------------------------------------------------------------------------------------
 def client_clone() -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
     pid, git_user, git_repo, git_branch = get_project_credentials(cfg)
-
     url = f"{git_user}/{git_repo}.git"
+
     cmd = f"python3 ~/madman/madman.py clone-server {pid} {url} {git_branch}"
     sys.exit(run_ssh(user, host, cmd))
 
-# Client-side: pull
 def client_pull(project_id_override: str | None) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
+    project_id = project_id_override if project_id_override else get_project_credentials(cfg)[0]
 
-    if project_id_override:
-        cmd = f"python3 ~/madman/madman.py pull-server {project_id_override}"
-        sys.exit(run_ssh(user, host, cmd))
-
-    pid, git_user, git_repo, git_branch = get_project_credentials(cfg)
-
-    cmd = f"python3 ~/madman/madman.py pull-server {pid} {git_user} {git_repo} {git_branch}"
+    cmd = f"python3 ~/madman/madman.py pull-server {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
-# Client-side: status
 def client_status(project_id_override: str | None) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
+    project_id = project_id_override if project_id_override else get_project_credentials(cfg)[0]
 
-    pid = project_id_override or cfg.get("project", {}).get("id")
-    if not pid:
-        print_error("Project ID not provided and not in project config")
-
-    cmd = f"python3 ~/madman/madman.py status-server {pid}"
+    cmd = f"python3 ~/madman/madman.py status-server {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
-# Server-side: clone-server
+# Server side commands impl --------------------------------------------------------------------------------------------
 def server_clone(args: List[str]) -> None:
-    if len(args) != 3:
-        print_error("Usage: clone-server <project_id> <git_url> <git_branch>")
-    pid, git_repo, git_branch = args
+    project_id, git_repo, git_branch = args
 
-    repo = PROJECTS_ROOT / pid
+    repo = PROJECTS_ROOT / project_id
     if repo.exists():
-        print_error(f"Repository '{pid}' already exists")
+        print_error(f"Repository '{project_id}' already exists")
     repo.parent.mkdir(parents=True, exist_ok=True)
 
     print_info(f"Git URI:  {git_repo}. Branch: {git_branch}")
@@ -134,45 +123,29 @@ def server_clone(args: List[str]) -> None:
     print_success('Clone successful')
     show_latest(repo)
 
-# Server-side: pull-server
 def server_pull(args: List[str]) -> None:
-    if len(args) not in (1, 4):
-        print_error("Usage: pull-server <project_id> [ssh_git_user git_repo git_branch]")
-
     pid = args[0]
     repo_path = PROJECTS_ROOT / pid
     repo_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if len(args) == 4:
-        _, git_user, git_repo, git_branch = args
-        url = f"{git_user}/{git_repo}.git"
-        if not repo_path.exists():
-            print_info(f"Cloning into {repo_path} …")
-            subprocess.run(["git", "clone", "-b", git_branch, url, str(repo_path)], check=True)
-        else:
-            # Already cloned; assume correct remote and branch
-            pass
-    else:
-        if not (repo_path / ".git").exists():
-            print_error("Repository not found; run full pull first")
-        git_branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=repo_path, text=True).strip()
+    if not (repo_path / ".git").exists():
+        print_error("Repository not found; run full pull first")
+    git_branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=repo_path, text=True).strip()
 
     print_info(f"Synchronizing to origin/{git_branch} …")
     subprocess.run(["git", "fetch", "origin"], cwd=repo_path, check=True)
     subprocess.run(["git", "reset", "--quiet", "--hard", f"origin/{git_branch}"], cwd=repo_path, check=True)
     show_latest(repo_path)
 
-# Server-side: status-server
 def server_status(args: List[str]) -> None:
-    if len(args) != 1:
-        print_error("Usage: status-server <project_id>")
-
     pid = args[0]
     repo_path = PROJECTS_ROOT / pid
     if not repo_path.exists():
         print_error(f"Repository '{pid}' not found")
 
     show_latest(repo_path)
+#-----------------------------------------------------------------------------------------------------------------------
+
 
 # Main entry
 def main() -> None:

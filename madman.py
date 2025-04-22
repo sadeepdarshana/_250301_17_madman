@@ -39,6 +39,16 @@ def load_config() -> Dict[str, Any]:
         config.update(yaml.safe_load(PROJECT_CONFIG.read_text()) or {})
     return config
 
+
+def get_ssh_credentials(cfg: Dict[str, Any]) -> tuple[str, str]:
+    """Extract ssh_user and host from config or exit."""
+    server = cfg.get("server") or {}
+    user = server.get("ssh_user")
+    host = server.get("host")
+    if not user or not host:
+        print_error("Missing server.ssh_user or server.host in config")
+    return user, host
+
 # SSH helper
 def run_ssh(user: str, host: str, command: str) -> int:
     target = f"{user}@{host}"
@@ -61,11 +71,7 @@ def show_latest(repo_path: Path) -> None:
 # Client-side: pull
 def client_pull(project_override: str | None) -> None:
     cfg = load_config()
-    server = cfg.get("server") or {}
-    user = server.get("ssh_user")
-    host = server.get("host")
-    if not user or not host:
-        print_error("Missing server.ssh_user or server.host in config")
+    user, host = get_ssh_credentials(cfg)
 
     if project_override:
         cmd = f"python3 ~/madman/madman.py pull-server {project_override}"
@@ -87,11 +93,7 @@ def client_pull(project_override: str | None) -> None:
 # Client-side: status
 def client_status(project_override: str | None) -> None:
     cfg = load_config()
-    server = cfg.get("server") or {}
-    user = server.get("ssh_user")
-    host = server.get("host")
-    if not user or not host:
-        print_error("Missing server.ssh_user or server.host in config")
+    user, host = get_ssh_credentials(cfg)
 
     pid = project_override or cfg.get("project", {}).get("id")
     if not pid:

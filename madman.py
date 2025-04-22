@@ -22,13 +22,13 @@ PROJECT_CONFIG = Path("madman.yaml")
 PROJECTS_ROOT = Path.home() / "madman" / "projects"
 
 def print_info(message: str) -> None:
-    print(f"{BLUE}[INFO]{RESET} {message}")
+    print(f"{BLUE}[INFO]{RESET} {message}", flush=True)
 
 def print_success(message: str) -> None:
-    print(f"{GREEN}[OK]{RESET} {message}")
+    print(f"{GREEN}[OK]{RESET} {message}", flush=True)
 
 def print_error(message: str) -> None:
-    print(f"{RED}[ERROR]{RESET} {message}", file=sys.stderr)
+    print(f"{RED}[ERROR]{RESET} {message}", file=sys.stderr, flush=True)
     sys.exit(1)
 
 
@@ -81,7 +81,16 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
         return project["id"], project["ssh_git_user"], project["ssh_git_repo"], project["ssh_git_branch"]
     except KeyError as e:
         print_error(f"Missing project config key: {e}")
-        sys.exit(1)
+
+# Client-side: clone
+def client_clone() -> None:
+    cfg = load_config()
+    user, host = get_ssh_credentials(cfg)
+    pid, git_user, git_repo, git_branch = get_project_credentials(cfg)
+
+    url = f"{git_user}/{git_repo}.git"
+    cmd = f"python3 ~/madman/madman.py clone-server {pid} {url} {git_branch}"
+    sys.exit(run_ssh(user, host, cmd))
 
 # Client-side: pull
 def client_pull(project_override: str | None) -> None:
@@ -108,6 +117,21 @@ def client_status(project_override: str | None) -> None:
 
     cmd = f"python3 ~/madman/madman.py status-server {pid}"
     sys.exit(run_ssh(user, host, cmd))
+
+# Server-side: clone-server
+def server_clone(args: List[str]) -> None:
+    if len(args) != 3:
+        print_error("Usage: clone-server <project_id> <git_url> <git_branch>")
+    pid, git_repo, git_branch = args
+
+    repo = PROJECTS_ROOT / pid
+    if repo.exists():
+        print_error(f"Repository '{pid}' already exists")
+    repo.parent.mkdir(parents=True, exist_ok=True)
+
+    print_info(f"Git URI:  {git_repo}. Branch: {git_branch}")
+    subprocess.run(["git", "clone", "-b", git_branch, git_repo, str(repo)], check=True)
+    show_latest(repo)
 
 # Server-side: pull-server
 def server_pull(args: List[str]) -> None:
@@ -152,14 +176,18 @@ def server_status(args: List[str]) -> None:
 # Main entry
 def main() -> None:
     parser = argparse.ArgumentParser("madman")
-    parser.add_argument("command", choices=["pull", "status", "pull-server", "status-server"] )
+    parser.add_argument("command", choices=["clone", "pull", "status", "clone-server", "pull-server", "status-server"] )
     parser.add_argument("args", nargs=argparse.REMAINDER)
     opts = parser.parse_args()
 
-    if opts.command == "pull":
+    if opts.command == "clone":
+        client_clone()
+    elif opts.command == "pull":
         client_pull(opts.args[0] if opts.args else None)
     elif opts.command == "status":
         client_status(opts.args[0] if opts.args else None)
+    elif opts.command == "clone-server":
+        server_clone(opts.args)
     elif opts.command == "pull-server":
         server_pull(opts.args)
     elif opts.command == "status-server":

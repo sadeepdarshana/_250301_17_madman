@@ -84,10 +84,10 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
 
 
 # Client side commands impl --------------------------------------------------------------------------------------------
-def client_clone(pid, url) -> None:
+def client_clone(project_id, url) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
-    cmd = f"python3 ~/madman/madman.py clone-server {pid} {url}"
+    cmd = f"python3 ~/madman/madman.py clone-server {project_id} {url}"
     sys.exit(run_ssh(user, host, cmd))
 
 def client_pull(project_id_override: str | None) -> None:
@@ -107,10 +107,10 @@ def client_status(project_id_override: str | None) -> None:
     sys.exit(run_ssh(user, host, cmd))
 
 # Server side commands impl --------------------------------------------------------------------------------------------
-def server_clone(pid, url) -> None:
-    repo = PROJECTS_ROOT / pid
+def server_clone(project_id, url) -> None:
+    repo = PROJECTS_ROOT / project_id
     if repo.exists():
-        print_error(f"Repository '{pid}' already exists")
+        print_error(f"Repository '{project_id}' already exists")
     repo.parent.mkdir(parents=True, exist_ok=True)
 
     print_info(f"Git URI:  {url}")
@@ -119,8 +119,8 @@ def server_clone(pid, url) -> None:
     show_latest(repo)
 
 def server_pull(args: List[str]) -> None:
-    pid = args[0]
-    repo_path = PROJECTS_ROOT / pid
+    project_id = args[0]
+    repo_path = PROJECTS_ROOT / project_id
     repo_path.parent.mkdir(parents=True, exist_ok=True)
 
     if not (repo_path / ".git").exists():
@@ -133,10 +133,10 @@ def server_pull(args: List[str]) -> None:
     show_latest(repo_path)
 
 def server_status(args: List[str]) -> None:
-    pid = args[0]
-    repo_path = PROJECTS_ROOT / pid
+    project_id = args[0]
+    repo_path = PROJECTS_ROOT / project_id
     if not repo_path.exists():
-        print_error(f"Repository '{pid}' not found")
+        print_error(f"Repository '{project_id}' not found")
 
     show_latest(repo_path)
 #-----------------------------------------------------------------------------------------------------------------------

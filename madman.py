@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
+from wsproto.connection import CLIENT
 
 # Color codes
 RESET = "\033[0m"
@@ -84,13 +85,10 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
 
 
 # Client side commands impl --------------------------------------------------------------------------------------------
-def client_clone() -> None:
+def client_clone(pid, url) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
-    pid, git_user, git_repo, git_branch = get_project_credentials(cfg)
-    url = f"{git_user}/{git_repo}.git"
-
-    cmd = f"python3 ~/madman/madman.py clone-server {pid} {url} {git_branch}"
+    cmd = f"python3 ~/madman/madman.py clone-server {pid} {url}"
     sys.exit(run_ssh(user, host, cmd))
 
 def client_pull(project_id_override: str | None) -> None:
@@ -155,7 +153,7 @@ def main() -> None:
     opts = parser.parse_args()
 
     if opts.command == "clone":
-        client_clone()
+        client_clone(*opts.args)
     elif opts.command == "pull":
         client_pull(opts.args[0] if opts.args else None)
     elif opts.command == "status":

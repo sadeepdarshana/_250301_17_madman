@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
-from wsproto.connection import CLIENT
 
 # Color codes
 RESET = "\033[0m"

@@ -108,16 +108,14 @@ def client_status(project_id_override: str | None) -> None:
     sys.exit(run_ssh(user, host, cmd))
 
 # Server side commands impl --------------------------------------------------------------------------------------------
-def server_clone(args: List[str]) -> None:
-    project_id, git_repo, git_branch = args
-
-    repo = PROJECTS_ROOT / project_id
+def server_clone(pid, url) -> None:
+    repo = PROJECTS_ROOT / pid
     if repo.exists():
-        print_error(f"Repository '{project_id}' already exists")
+        print_error(f"Repository '{pid}' already exists")
     repo.parent.mkdir(parents=True, exist_ok=True)
 
-    print_info(f"Git URI:  {git_repo}. Branch: {git_branch}")
-    subprocess.run(["git", "clone", "-b", git_branch, git_repo, str(repo)], check=True)
+    print_info(f"Git URI:  {url}")
+    subprocess.run(["git", "clone", url, str(repo)], check=True)
     print_success('Clone successful')
     show_latest(repo)
 
@@ -159,7 +157,7 @@ def main() -> None:
     elif opts.command == "status":
         client_status(opts.args[0] if opts.args else None)
     elif opts.command == "clone-server":
-        server_clone(opts.args)
+        server_clone(*opts.args)
     elif opts.command == "pull-server":
         server_pull(opts.args)
     elif opts.command == "status-server":

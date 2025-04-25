@@ -90,10 +90,9 @@ def client_clone(project_id, url) -> None:
     cmd = f"python3 ~/madman/madman.py clone-server {project_id} {url}"
     sys.exit(run_ssh(user, host, cmd))
 
-def client_pull(project_id_override: str | None) -> None:
+def client_pull(project_id) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
-    project_id = project_id_override if project_id_override else get_project_credentials(cfg)[0]
 
     cmd = f"python3 ~/madman/madman.py pull-server {project_id}"
     sys.exit(run_ssh(user, host, cmd))
@@ -152,7 +151,7 @@ def main() -> None:
     if opts.command == "clone":
         client_clone(*opts.args)
     elif opts.command == "pull":
-        client_pull(opts.args[0] if opts.args else None)
+        client_pull(*opts.args)
     elif opts.command == "status":
         client_status(opts.args[0] if opts.args else None)
     elif opts.command == "clone-server":

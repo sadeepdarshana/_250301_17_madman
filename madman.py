@@ -181,13 +181,13 @@ def main() -> None:
     elif options.command == "pull":
         client_pull(*options.args)
     elif options.command == "status":
-        client_status(options.args[0] if options.args else None)
+        client_status(*options.args)
     elif options.command == "server-clone":
         server_clone(*options.args)
     elif options.command == "server-pull":
         server_pull(*options.args)
     elif options.command == "server-status":
-        server_status(options.args)
+        server_status(*options.args)
 
 
 if __name__ == "__main__":

@@ -40,7 +40,13 @@ def print_error(message: str) -> None:
 
 def assert_project_exists(project_id):
     if not (PROJECTS_ROOT / project_id / ".git").exists():
-        print_error(f"Project '{project_id}' not found on server")
+        print_error(f"Project with ID '{project_id}' not found on server")
+
+
+def assert_project_not_exists(project_id):
+    repo_path = PROJECTS_ROOT / project_id
+    if repo_path.exists():
+        print_error(f"Project with ID '{project_id}' already exists on server")
 
 
 def get(d, path, default=None):
@@ -106,14 +112,14 @@ def client_clone(project_id, url) -> None:
 
 
 def server_clone(project_id, url) -> None:
+    assert_project_not_exists(project_id)
     repo_path = PROJECTS_ROOT / project_id
-    if repo_path.exists():
-        print_error(f"Project with ID '{project_id}' already exists on server")
     repo_path.parent.mkdir(parents=True, exist_ok=True)
 
     print_info(f"Cloning {url} into {repo_path}")
     subprocess.run(["git", "clone", "--quiet", url, str(repo_path)], check=True)
     print_success('Clone successful')
+
     show_latest(repo_path)
 
 
@@ -126,17 +132,18 @@ def client_pull(project_id) -> None:
     sys.exit(run_ssh(user, host, cmd))
 
 
-def server_pull(args: List[str]) -> None:
-    project_id = args[0]
-    repo_path = PROJECTS_ROOT / project_id
-    repo_path.parent.mkdir(parents=True, exist_ok=True)
-
+def server_pull(project_id: str) -> None:
     assert_project_exists(project_id)
-    git_branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=repo_path, text=True).strip()
+    repo_path = PROJECTS_ROOT / project_id
 
+    show_latest(repo_path)
+
+    git_branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=repo_path, text=True).strip()
     print_info(f"Synchronizing to origin/{git_branch} …")
-    subprocess.run(["git", "fetch", "origin"], cwd=repo_path, check=True)
+    subprocess.run(["git", "fetch", "--quiet", "origin"], cwd=repo_path, check=True)
     subprocess.run(["git", "reset", "--quiet", "--hard", f"origin/{git_branch}"], cwd=repo_path, check=True)
+    print_success('Pull successful')
+
     show_latest(repo_path)
 
 
@@ -166,23 +173,23 @@ def main() -> None:
     parser = argparse.ArgumentParser("madman")
     parser.add_argument("command", choices=CLIENT_COMMANDS + SERVER_COMMANDS)
     parser.add_argument("args", nargs=argparse.REMAINDER)
-    opts = parser.parse_args()
+    options = parser.parse_args()
 
-    if opts.command in CLIENT_COMMANDS:
+    if options.command in CLIENT_COMMANDS:
         validate_madman_client_config()
 
-    if opts.command == "clone":
-        client_clone(*opts.args)
-    elif opts.command == "pull":
-        client_pull(*opts.args)
-    elif opts.command == "status":
-        client_status(opts.args[0] if opts.args else None)
-    elif opts.command == "server-clone":
-        server_clone(*opts.args)
-    elif opts.command == "server-pull":
-        server_pull(opts.args)
-    elif opts.command == "server-status":
-        server_status(opts.args)
+    if options.command == "clone":
+        client_clone(*options.args)
+    elif options.command == "pull":
+        client_pull(*options.args)
+    elif options.command == "status":
+        client_status(options.args[0] if options.args else None)
+    elif options.command == "server-clone":
+        server_clone(*options.args)
+    elif options.command == "server-pull":
+        server_pull(*options.args)
+    elif options.command == "server-status":
+        server_status(options.args)
 
 
 if __name__ == "__main__":

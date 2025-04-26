@@ -14,9 +14,10 @@ GREEN = "\033[92m"
 RED = "\033[91m"
 BLUE = "\033[94m"
 
-# YAML config paths on client
 MADMAN_CLIENT_CONFIG = Path.home() / ".madman-client-config.yaml"
 PROJECT_CONFIG = Path("madman.yaml")
+
+SCRIPT_DEFAULT_COMMAND = "python3 ~/madman/madman.py"
 
 CLIENT_COMMANDS = ["clone", "pull", "status"]
 SERVER_COMMANDS = ["server-clone", "server-pull", "server-status"]
@@ -60,7 +61,15 @@ def get(d, path, default=None):
 
 
 def madman_client_config() -> Any | None:
-    return yaml.safe_load(MADMAN_CLIENT_CONFIG.read_text()) if MADMAN_CLIENT_CONFIG.exists() else None
+    if not MADMAN_CLIENT_CONFIG.exists():
+        return None
+
+    config = yaml.safe_load(MADMAN_CLIENT_CONFIG.read_text())
+
+    if not get(config, 'server.script_command'):
+        config['server']['script_command'] = SCRIPT_DEFAULT_COMMAND
+
+    return config
 
 
 def validate_madman_client_config() -> None:
@@ -106,9 +115,9 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
 # --------- Clone -----------
 def client_clone(project_id, url) -> None:
     config = madman_client_config()
-    user, host = config["server"]["username"], config["server"]["host"]
+    user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
 
-    cmd = f"python3 ~/madman/madman.py server-clone {project_id} {url}"
+    cmd = f"{command} server-clone {project_id} {url}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -127,9 +136,9 @@ def server_clone(project_id, url) -> None:
 # --------- Pull ----------
 def client_pull(project_id) -> None:
     config = madman_client_config()
-    user, host = config["server"]["username"], config["server"]["host"]
+    user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
 
-    cmd = f"python3 ~/madman/madman.py server-pull {project_id}"
+    cmd = f"{command} server-pull {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -151,9 +160,9 @@ def server_pull(project_id: str) -> None:
 # --------- Status ---------
 def client_status(project_id: str) -> None:
     config = madman_client_config()
-    user, host = config["server"]["username"], config["server"]["host"]
+    user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
 
-    cmd = f"python3 ~/madman/madman.py server-status {project_id}"
+    cmd = f"{command} server-status {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
 

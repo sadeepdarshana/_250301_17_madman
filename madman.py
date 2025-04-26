@@ -94,27 +94,11 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
         print_error(f"Missing project config key: {e}")
 
 
+# Server and client commands -------------------------------------------------------------------------------------------
 def client_clone(project_id, url) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
     cmd = f"python3 ~/madman/madman.py clone-server {project_id} {url}"
-    sys.exit(run_ssh(user, host, cmd))
-
-
-def client_pull(project_id) -> None:
-    cfg = load_config()
-    user, host = get_ssh_credentials(cfg)
-
-    cmd = f"python3 ~/madman/madman.py pull-server {project_id}"
-    sys.exit(run_ssh(user, host, cmd))
-
-
-def client_status(project_id_override: str | None) -> None:
-    cfg = load_config()
-    user, host = get_ssh_credentials(cfg)
-    project_id = project_id_override if project_id_override else get_project_credentials(cfg)[0]
-
-    cmd = f"python3 ~/madman/madman.py status-server {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -128,6 +112,14 @@ def server_clone(project_id, url) -> None:
     subprocess.run(["git", "clone", "--quiet", url, str(repo_path)], check=True)
     print_success('Clone successful')
     show_latest(repo_path)
+
+
+def client_pull(project_id) -> None:
+    cfg = load_config()
+    user, host = get_ssh_credentials(cfg)
+
+    cmd = f"python3 ~/madman/madman.py pull-server {project_id}"
+    sys.exit(run_ssh(user, host, cmd))
 
 
 def server_pull(args: List[str]) -> None:
@@ -144,6 +136,15 @@ def server_pull(args: List[str]) -> None:
     show_latest(repo_path)
 
 
+def client_status(project_id_override: str | None) -> None:
+    cfg = load_config()
+    user, host = get_ssh_credentials(cfg)
+    project_id = project_id_override if project_id_override else get_project_credentials(cfg)[0]
+
+    cmd = f"python3 ~/madman/madman.py status-server {project_id}"
+    sys.exit(run_ssh(user, host, cmd))
+
+
 def server_status(args: List[str]) -> None:
     project_id = args[0]
     repo_path = PROJECTS_ROOT / project_id
@@ -152,8 +153,7 @@ def server_status(args: List[str]) -> None:
     show_latest(repo_path)
 
 
-# -----------------------------------------------------------------------------------------------------------------------
-
+# ----------------------------------------------------------------------------------------------------------------------
 
 # Main entry
 def main() -> None:

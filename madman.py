@@ -21,11 +21,14 @@ PROJECT_CONFIG = Path("madman.yaml")
 # Path to projects on server
 PROJECTS_ROOT = Path.home() / "madman" / "projects"
 
+
 def print_info(message: str) -> None:
     print(f"{BLUE}[INFO]{RESET} {message}", flush=True)
 
+
 def print_success(message: str) -> None:
     print(f"{GREEN}[OK]{RESET} {message}", flush=True)
+
 
 def print_error(message: str) -> None:
     print(f"{RED}[ERROR]{RESET} {message}", file=sys.stderr, flush=True)
@@ -35,6 +38,7 @@ def print_error(message: str) -> None:
 def assert_project_exists(repo_path):
     if not (repo_path / ".git").exists():
         print_error("Project not found on server")
+
 
 def deep_merge(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
     """Recursively merge b into a (b wins)."""
@@ -63,11 +67,13 @@ def get_ssh_credentials(cfg: Dict[str, Any]) -> tuple[str, str]:
         print_error("Missing server.ssh_user or server.host in config")
     return user, host
 
+
 # SSH helper
 def run_ssh(user: str, host: str, command: str) -> int:
     target = f"{user}@{host}"
     print_info(f"Running on {target}: {command}")
     return subprocess.run(["ssh", target, command]).returncode
+
 
 # Print latest commit info
 def show_latest(repo_path: Path) -> None:
@@ -79,6 +85,7 @@ def show_latest(repo_path: Path) -> None:
     message = git_cmd("log", "-1", "--pretty=%s")
     print_info(f"branch: {branch} | commit: {commit} | message: {message}")
 
+
 def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
     project = cfg.get("project") or {}
     try:
@@ -87,12 +94,12 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
         print_error(f"Missing project config key: {e}")
 
 
-# Client side commands impl --------------------------------------------------------------------------------------------
 def client_clone(project_id, url) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
     cmd = f"python3 ~/madman/madman.py clone-server {project_id} {url}"
     sys.exit(run_ssh(user, host, cmd))
+
 
 def client_pull(project_id) -> None:
     cfg = load_config()
@@ -100,6 +107,7 @@ def client_pull(project_id) -> None:
 
     cmd = f"python3 ~/madman/madman.py pull-server {project_id}"
     sys.exit(run_ssh(user, host, cmd))
+
 
 def client_status(project_id_override: str | None) -> None:
     cfg = load_config()
@@ -109,7 +117,7 @@ def client_status(project_id_override: str | None) -> None:
     cmd = f"python3 ~/madman/madman.py status-server {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
-# Server side commands impl --------------------------------------------------------------------------------------------
+
 def server_clone(project_id, url) -> None:
     repo_path = PROJECTS_ROOT / project_id
     if repo_path.exists():
@@ -120,6 +128,7 @@ def server_clone(project_id, url) -> None:
     subprocess.run(["git", "clone", "--quiet", url, str(repo_path)], check=True)
     print_success('Clone successful')
     show_latest(repo_path)
+
 
 def server_pull(args: List[str]) -> None:
     project_id = args[0]
@@ -134,19 +143,22 @@ def server_pull(args: List[str]) -> None:
     subprocess.run(["git", "reset", "--quiet", "--hard", f"origin/{git_branch}"], cwd=repo_path, check=True)
     show_latest(repo_path)
 
+
 def server_status(args: List[str]) -> None:
     project_id = args[0]
     repo_path = PROJECTS_ROOT / project_id
     assert_project_exists(repo_path)
 
     show_latest(repo_path)
-#-----------------------------------------------------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------------------------------------------------
 
 
 # Main entry
 def main() -> None:
     parser = argparse.ArgumentParser("madman")
-    parser.add_argument("command", choices=["clone", "pull", "status", "clone-server", "pull-server", "status-server"] )
+    parser.add_argument("command", choices=["clone", "pull", "status", "clone-server", "pull-server", "status-server"])
     parser.add_argument("args", nargs=argparse.REMAINDER)
     opts = parser.parse_args()
 
@@ -162,6 +174,7 @@ def main() -> None:
         server_pull(opts.args)
     elif opts.command == "status-server":
         server_status(opts.args)
+
 
 if __name__ == "__main__":
     main()

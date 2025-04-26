@@ -107,6 +107,7 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
 def client_clone(project_id, url) -> None:
     config = madman_client_config()
     user, host = config["server"]["username"], config["server"]["host"]
+
     cmd = f"python3 ~/madman/madman.py server-clone {project_id} {url}"
     sys.exit(run_ssh(user, host, cmd))
 
@@ -148,20 +149,17 @@ def server_pull(project_id: str) -> None:
 
 
 # --------- Status ---------
-def client_status(project_id_override: str | None) -> None:
+def client_status(project_id: str) -> None:
     config = madman_client_config()
     user, host = config["server"]["username"], config["server"]["host"]
 
-    # project_id = project_id_override if project_id_override else get_project_credentials(cfg)[0]
-
-    # cmd = f"python3 ~/madman/madman.py server-status {project_id}"
-    # sys.exit(run_ssh(user, host, cmd))
+    cmd = f"python3 ~/madman/madman.py server-status {project_id}"
+    sys.exit(run_ssh(user, host, cmd))
 
 
-def server_status(args: List[str]) -> None:
-    project_id = args[0]
-    repo_path = PROJECTS_ROOT / project_id
+def server_status(project_id: str) -> None:
     assert_project_exists(project_id)
+    repo_path = PROJECTS_ROOT / project_id
 
     show_latest(repo_path)
 

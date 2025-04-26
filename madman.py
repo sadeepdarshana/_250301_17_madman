@@ -32,6 +32,10 @@ def print_error(message: str) -> None:
     sys.exit(1)
 
 
+def assert_project_exists(repo_path):
+    if not (repo_path / ".git").exists():
+        print_error("Project not found on server")
+
 def deep_merge(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
     """Recursively merge b into a (b wins)."""
     result = a.copy()
@@ -107,23 +111,22 @@ def client_status(project_id_override: str | None) -> None:
 
 # Server side commands impl --------------------------------------------------------------------------------------------
 def server_clone(project_id, url) -> None:
-    repo = PROJECTS_ROOT / project_id
-    if repo.exists():
+    repo_path = PROJECTS_ROOT / project_id
+    if repo_path.exists():
         print_error(f"Repository '{project_id}' already exists")
-    repo.parent.mkdir(parents=True, exist_ok=True)
+    repo_path.parent.mkdir(parents=True, exist_ok=True)
 
-    print_info(f"Git URI:  {url}")
-    subprocess.run(["git", "clone", url, str(repo)], check=True)
+    print_info(f"Cloning {url} into {repo_path}")
+    subprocess.run(["git", "clone", "--quiet", url, str(repo_path)], check=True)
     print_success('Clone successful')
-    show_latest(repo)
+    show_latest(repo_path)
 
 def server_pull(args: List[str]) -> None:
     project_id = args[0]
     repo_path = PROJECTS_ROOT / project_id
     repo_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if not (repo_path / ".git").exists():
-        print_error("Repository not found; run full pull first")
+    assert_project_exists(repo_path)
     git_branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=repo_path, text=True).strip()
 
     print_info(f"Synchronizing to origin/{git_branch} …")
@@ -134,8 +137,7 @@ def server_pull(args: List[str]) -> None:
 def server_status(args: List[str]) -> None:
     project_id = args[0]
     repo_path = PROJECTS_ROOT / project_id
-    if not repo_path.exists():
-        print_error(f"Repository '{project_id}' not found")
+    assert_project_exists(repo_path)
 
     show_latest(repo_path)
 #-----------------------------------------------------------------------------------------------------------------------

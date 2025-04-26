@@ -39,18 +39,18 @@ def print_error(message: str) -> None:
     sys.exit(1)
 
 
-def assert_project_exists(project_id):
+def assert_project_exists(project_id: str):
     if not (PROJECTS_ROOT / project_id / ".git").exists():
         print_error(f"Project with ID '{project_id}' not found on server")
 
 
-def assert_project_not_exists(project_id):
+def assert_project_not_exists(project_id: str):
     repo_path = PROJECTS_ROOT / project_id
     if repo_path.exists():
         print_error(f"Project with ID '{project_id}' already exists on server")
 
 
-def get(d, path, default=None):
+def get(d: dict, path: str, default=None):
     keys = path.split(".")
     for key in keys:
         if isinstance(d, dict):
@@ -105,7 +105,7 @@ def show_latest(repo_path: Path) -> None:
 
 # Server and client commands -------------------------------------------------------------------------------------------
 # --------- Clone -----------
-def client_clone(project_id, url) -> None:
+def client_clone(project_id: str, url: str) -> None:
     config = madman_client_config()
     user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
 
@@ -113,7 +113,7 @@ def client_clone(project_id, url) -> None:
     sys.exit(run_ssh(user, host, cmd))
 
 
-def server_clone(project_id, url) -> None:
+def server_clone(project_id: str, url: str) -> None:
     assert_project_not_exists(project_id)
     repo_path = PROJECTS_ROOT / project_id
     repo_path.parent.mkdir(parents=True, exist_ok=True)
@@ -126,7 +126,7 @@ def server_clone(project_id, url) -> None:
 
 
 # --------- Pull ----------
-def client_pull(project_id) -> None:
+def client_pull(project_id: str) -> None:
     config = madman_client_config()
     user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
 

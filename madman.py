@@ -99,7 +99,7 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
 def client_clone(project_id, url) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
-    cmd = f"python3 ~/madman/madman.py clone-server {project_id} {url}"
+    cmd = f"python3 ~/madman/madman.py server-clone {project_id} {url}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -119,7 +119,7 @@ def client_pull(project_id) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
 
-    cmd = f"python3 ~/madman/madman.py pull-server {project_id}"
+    cmd = f"python3 ~/madman/madman.py server-pull {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -143,7 +143,7 @@ def client_status(project_id_override: str | None) -> None:
     user, host = get_ssh_credentials(cfg)
     project_id = project_id_override if project_id_override else get_project_credentials(cfg)[0]
 
-    cmd = f"python3 ~/madman/madman.py status-server {project_id}"
+    cmd = f"python3 ~/madman/madman.py server-status {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -160,7 +160,7 @@ def server_status(args: List[str]) -> None:
 # Main entry
 def main() -> None:
     parser = argparse.ArgumentParser("madman")
-    parser.add_argument("command", choices=["clone", "pull", "status", "clone-server", "pull-server", "status-server"])
+    parser.add_argument("command", choices=["clone", "pull", "status", "server-clone", "server-pull", "server-status"])
     parser.add_argument("args", nargs=argparse.REMAINDER)
     opts = parser.parse_args()
 
@@ -170,11 +170,11 @@ def main() -> None:
         client_pull(*opts.args)
     elif opts.command == "status":
         client_status(opts.args[0] if opts.args else None)
-    elif opts.command == "clone-server":
+    elif opts.command == "server-clone":
         server_clone(*opts.args)
-    elif opts.command == "pull-server":
+    elif opts.command == "server-pull":
         server_pull(opts.args)
-    elif opts.command == "status-server":
+    elif opts.command == "server-status":
         server_status(opts.args)
 
 

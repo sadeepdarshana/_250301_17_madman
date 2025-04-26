@@ -1,6 +1,7 @@
 """Madman – Git pull/deploy helper (client + server)"""
 
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -13,8 +14,8 @@ PROJECT_CONFIG = Path("madman.yaml")
 
 SCRIPT_DEFAULT_COMMAND = "python3 ~/madman/madman.py"
 
-CLIENT_COMMANDS = ["clone", "pull", "status"]
-SERVER_COMMANDS = ["server-clone", "server-pull", "server-status"]
+CLIENT_COMMANDS = ["clone", "pull", "status", "delete"]
+SERVER_COMMANDS = ["server-clone", "server-pull", "server-status", "server-delete"]
 
 # Path to projects on server
 PROJECTS_ROOT = Path.home() / "madman" / "projects"
@@ -164,9 +165,32 @@ def server_status(project_id: str) -> None:
     show_latest(repo_path)
 
 
+# --------- Delete ---------
+def client_delete(project_id: str) -> None:
+    config = madman_client_config()
+    user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
+
+    cmd = f"{command} server-delete {project_id}"
+    sys.exit(run_ssh(user, host, cmd))
+
+
+def server_delete(project_id: str) -> None:
+    assert_project_exists(project_id)
+    repo_path = PROJECTS_ROOT / project_id
+
+    show_latest(repo_path)
+
+    try:
+        show_latest(repo_path)
+        shutil.rmtree(repo_path)
+        print_success(f"Successfully deleted project")
+    except Exception as e:
+        print_error(f"Failed to delete directory {repo_path}: {e}")
+
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 
-# Main entry
 def main() -> None:
     parser = argparse.ArgumentParser("madman")
     parser.add_argument("command", choices=CLIENT_COMMANDS + SERVER_COMMANDS)
@@ -178,16 +202,20 @@ def main() -> None:
 
     if options.command == "clone":
         client_clone(*options.args)
-    elif options.command == "pull":
-        client_pull(*options.args)
-    elif options.command == "status":
-        client_status(*options.args)
     elif options.command == "server-clone":
         server_clone(*options.args)
+    elif options.command == "pull":
+        client_pull(*options.args)
     elif options.command == "server-pull":
         server_pull(*options.args)
+    elif options.command == "status":
+        client_status(*options.args)
     elif options.command == "server-status":
         server_status(*options.args)
+    elif options.command == "delete":
+        client_delete(*options.args)
+    elif options.command == "server-delete":
+        server_delete(*options.args)
 
 
 if __name__ == "__main__":

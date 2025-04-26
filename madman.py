@@ -102,14 +102,6 @@ def show_latest(repo_path: Path) -> None:
     print_info(f"branch: {branch} | commit: {commit} | message: {message}")
 
 
-def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
-    project = cfg.get("project") or {}
-    try:
-        return project["id"], project["ssh_git_user"], project["git_repo"], project["git_branch"]
-    except KeyError as e:
-        print_error(f"Missing project config key: {e}")
-
-
 # Server and client commands -------------------------------------------------------------------------------------------
 # --------- Clone -----------
 def client_clone(project_id, url) -> None:

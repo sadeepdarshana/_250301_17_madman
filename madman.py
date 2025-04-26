@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import yaml
 
@@ -17,25 +17,19 @@ SCRIPT_DEFAULT_COMMAND = "python3 ~/madman/madman.py"
 CLIENT_COMMANDS = ["clone", "pull", "status", "delete"]
 SERVER_COMMANDS = ["server-clone", "server-pull", "server-status", "server-delete"]
 
-# Path to projects on server
 PROJECTS_ROOT = Path.home() / "madman" / "projects"
-
-RESET = "\033[0m"
-GREEN = "\033[92m"
-RED = "\033[91m"
-BLUE = "\033[94m"
 
 
 def print_info(message: str) -> None:
-    print(f"{BLUE}[INFO]{RESET} {message}", flush=True)
+    print(f"{"\033[94m"}[INFO]{"\033[0m"} {message}", flush=True)
 
 
 def print_success(message: str) -> None:
-    print(f"{GREEN}[OK]{RESET} {message}", flush=True)
+    print(f"{"\033[92m"}[OK]{"\033[0m"} {message}", flush=True)
 
 
 def print_error(message: str) -> None:
-    print(f"{RED}[ERROR]{RESET} {message}", file=sys.stderr, flush=True)
+    print(f"{"\033[91m"}[ERROR]{"\033[0m"} {message}", file=sys.stderr, flush=True)
     sys.exit(1)
 
 

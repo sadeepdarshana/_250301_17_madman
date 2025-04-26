@@ -100,7 +100,7 @@ def show_latest(repo_path: Path) -> None:
     branch = git_cmd("branch", "--show-current")
     commit = git_cmd("rev-parse", "--short", "HEAD")
     message = git_cmd("log", "-1", "--pretty=%s")
-    print_info(f"branch: {branch} | commit: {commit} | message: {message}")
+    print_info(f"branch: {branch}  |  commit: {commit}  |  message: {message}  |  path: {repo_path}")
 
 
 # Server and client commands -------------------------------------------------------------------------------------------

@@ -181,7 +181,6 @@ def server_delete(project_id: str) -> None:
     show_latest(repo_path)
 
     try:
-        show_latest(repo_path)
         shutil.rmtree(repo_path)
         print_success(f"Successfully deleted project")
     except Exception as e:

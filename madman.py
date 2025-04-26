@@ -187,7 +187,6 @@ def server_delete(project_id: str) -> None:
         print_error(f"Failed to delete directory {repo_path}: {e}")
 
 
-
 # ----------------------------------------------------------------------------------------------------------------------
 
 def main() -> None:
@@ -199,22 +198,21 @@ def main() -> None:
     if options.command in CLIENT_COMMANDS:
         validate_madman_client_config()
 
-    if options.command == "clone":
-        client_clone(*options.args)
-    elif options.command == "server-clone":
-        server_clone(*options.args)
-    elif options.command == "pull":
-        client_pull(*options.args)
-    elif options.command == "server-pull":
-        server_pull(*options.args)
-    elif options.command == "status":
-        client_status(*options.args)
-    elif options.command == "server-status":
-        server_status(*options.args)
-    elif options.command == "delete":
-        client_delete(*options.args)
-    elif options.command == "server-delete":
-        server_delete(*options.args)
+    commands_map = {
+        "clone": client_clone,
+        "server-clone": server_clone,
+        "pull": client_pull,
+        "server-pull": server_pull,
+        "status": client_status,
+        "server-status": server_status,
+        "delete": client_delete,
+        "server-delete": server_delete,
+    }
+
+    if options.command not in commands_map:
+        print_error(f"Unknown command: {options.command}")
+
+    commands_map[options.command](*options.args)
 
 
 if __name__ == "__main__":

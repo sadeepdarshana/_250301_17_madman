@@ -8,12 +8,6 @@ from typing import Any, Dict, List
 
 import yaml
 
-# Color codes
-RESET = "\033[0m"
-GREEN = "\033[92m"
-RED = "\033[91m"
-BLUE = "\033[94m"
-
 MADMAN_CLIENT_CONFIG = Path.home() / ".madman-client-config.yaml"
 PROJECT_CONFIG = Path("madman.yaml")
 
@@ -24,6 +18,11 @@ SERVER_COMMANDS = ["server-clone", "server-pull", "server-status"]
 
 # Path to projects on server
 PROJECTS_ROOT = Path.home() / "madman" / "projects"
+
+RESET = "\033[0m"
+GREEN = "\033[92m"
+RED = "\033[91m"
+BLUE = "\033[94m"
 
 
 def print_info(message: str) -> None:

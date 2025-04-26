@@ -95,7 +95,7 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
 
 
 # Server and client commands -------------------------------------------------------------------------------------------
-# --------- Clone
+# --------- Clone -----------
 def client_clone(project_id, url) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
@@ -114,7 +114,7 @@ def server_clone(project_id, url) -> None:
     print_success('Clone successful')
     show_latest(repo_path)
 
-# --------- Pull
+# --------- Pull ----------
 def client_pull(project_id) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)
@@ -137,7 +137,7 @@ def server_pull(args: List[str]) -> None:
     show_latest(repo_path)
 
 
-# --------- Status
+# --------- Status ---------
 def client_status(project_id_override: str | None) -> None:
     cfg = load_config()
     user, host = get_ssh_credentials(cfg)

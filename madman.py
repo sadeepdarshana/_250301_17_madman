@@ -3,6 +3,7 @@
 import argparse
 import subprocess
 import sys
+import traceback
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -15,8 +16,11 @@ RED = "\033[91m"
 BLUE = "\033[94m"
 
 # YAML config paths on client
-SYSTEM_CONFIG = Path.home() / "madman.yaml"
+MADMAN_CLIENT_CONFIG = Path.home() / ".madman-client-config.yaml"
 PROJECT_CONFIG = Path("madman.yaml")
+
+CLIENT_COMMANDS = ["clone", "pull", "status"]
+SERVER_COMMANDS = ["server-clone", "server-pull", "server-status"]
 
 # Path to projects on server
 PROJECTS_ROOT = Path.home() / "madman" / "projects"
@@ -35,37 +39,36 @@ def print_error(message: str) -> None:
     sys.exit(1)
 
 
-def assert_project_exists(repo_path):
-    if not (repo_path / ".git").exists():
-        print_error("Project not found on server")
+def assert_project_exists(project_id):
+    if not (PROJECTS_ROOT / project_id / ".git").exists():
+        print_error(f"Project '{project_id}' not found on server")
 
 
-def deep_merge(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
-    """Recursively merge b into a (b wins)."""
-    result = a.copy()
-    for key, val in b.items():
-        if key in result and isinstance(result[key], dict) and isinstance(val, dict):
-            result[key] = deep_merge(result[key], val)
+def get(d, path, default=None):
+    keys = path.split(".")
+    for key in keys:
+        if isinstance(d, dict):
+            d = d.get(key, default)
         else:
-            result[key] = val
-    return result
+            return default
+    return d
 
 
-def load_config() -> Dict[str, Any]:
-    """Merge system + project YAML with deep override."""
-    sys_cfg = yaml.safe_load(SYSTEM_CONFIG.read_text()) or {} if SYSTEM_CONFIG.exists() else {}
-    proj_cfg = yaml.safe_load(PROJECT_CONFIG.read_text()) or {} if PROJECT_CONFIG.exists() else {}
-    return deep_merge(sys_cfg, proj_cfg)
+def madman_client_config() -> Any | None:
+    return yaml.safe_load(MADMAN_CLIENT_CONFIG.read_text()) if MADMAN_CLIENT_CONFIG.exists() else None
 
 
-def get_ssh_credentials(cfg: Dict[str, Any]) -> tuple[str, str]:
-    """Extract ssh_user and host from config or exit."""
-    server = cfg.get("server") or {}
-    user = server.get("ssh_user")
-    host = server.get("host")
-    if not user or not host:
-        print_error("Missing server.ssh_user or server.host in config")
-    return user, host
+def validate_madman_client_config() -> None:
+    if not MADMAN_CLIENT_CONFIG.exists():
+        print_error("Madman client config not found at ~/.madman-client-config.yaml")
+
+    config = madman_client_config()
+
+    if not config:
+        print_error("Madman client config (~/.madman-client-config.yaml) parsing error")
+
+    if not get(config, "server.host") or not get(config, "server.username"):
+        print_error("server.host or server.username not found in Madman client config (~/.madman-client-config.yaml)")
 
 
 # SSH helper
@@ -97,8 +100,8 @@ def get_project_credentials(cfg: Dict[str, Any]) -> tuple[str, str, str, str]:
 # Server and client commands -------------------------------------------------------------------------------------------
 # --------- Clone -----------
 def client_clone(project_id, url) -> None:
-    cfg = load_config()
-    user, host = get_ssh_credentials(cfg)
+    config = madman_client_config()
+    user, host = config["server"]["username"], config["server"]["host"]
     cmd = f"python3 ~/madman/madman.py server-clone {project_id} {url}"
     sys.exit(run_ssh(user, host, cmd))
 
@@ -106,7 +109,7 @@ def client_clone(project_id, url) -> None:
 def server_clone(project_id, url) -> None:
     repo_path = PROJECTS_ROOT / project_id
     if repo_path.exists():
-        print_error(f"Repository '{project_id}' already exists")
+        print_error(f"Project with ID '{project_id}' already exists on server")
     repo_path.parent.mkdir(parents=True, exist_ok=True)
 
     print_info(f"Cloning {url} into {repo_path}")
@@ -114,10 +117,11 @@ def server_clone(project_id, url) -> None:
     print_success('Clone successful')
     show_latest(repo_path)
 
+
 # --------- Pull ----------
 def client_pull(project_id) -> None:
-    cfg = load_config()
-    user, host = get_ssh_credentials(cfg)
+    config = madman_client_config()
+    user, host = config["server"]["username"], config["server"]["host"]
 
     cmd = f"python3 ~/madman/madman.py server-pull {project_id}"
     sys.exit(run_ssh(user, host, cmd))
@@ -128,7 +132,7 @@ def server_pull(args: List[str]) -> None:
     repo_path = PROJECTS_ROOT / project_id
     repo_path.parent.mkdir(parents=True, exist_ok=True)
 
-    assert_project_exists(repo_path)
+    assert_project_exists(project_id)
     git_branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=repo_path, text=True).strip()
 
     print_info(f"Synchronizing to origin/{git_branch} …")
@@ -139,18 +143,19 @@ def server_pull(args: List[str]) -> None:
 
 # --------- Status ---------
 def client_status(project_id_override: str | None) -> None:
-    cfg = load_config()
-    user, host = get_ssh_credentials(cfg)
-    project_id = project_id_override if project_id_override else get_project_credentials(cfg)[0]
+    config = madman_client_config()
+    user, host = config["server"]["username"], config["server"]["host"]
 
-    cmd = f"python3 ~/madman/madman.py server-status {project_id}"
-    sys.exit(run_ssh(user, host, cmd))
+    # project_id = project_id_override if project_id_override else get_project_credentials(cfg)[0]
+
+    # cmd = f"python3 ~/madman/madman.py server-status {project_id}"
+    # sys.exit(run_ssh(user, host, cmd))
 
 
 def server_status(args: List[str]) -> None:
     project_id = args[0]
     repo_path = PROJECTS_ROOT / project_id
-    assert_project_exists(repo_path)
+    assert_project_exists(project_id)
 
     show_latest(repo_path)
 
@@ -160,9 +165,12 @@ def server_status(args: List[str]) -> None:
 # Main entry
 def main() -> None:
     parser = argparse.ArgumentParser("madman")
-    parser.add_argument("command", choices=["clone", "pull", "status", "server-clone", "server-pull", "server-status"])
+    parser.add_argument("command", choices=CLIENT_COMMANDS + SERVER_COMMANDS)
     parser.add_argument("args", nargs=argparse.REMAINDER)
     opts = parser.parse_args()
+
+    if opts.command in CLIENT_COMMANDS:
+        validate_madman_client_config()
 
     if opts.command == "clone":
         client_clone(*opts.args)

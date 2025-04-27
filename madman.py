@@ -102,8 +102,7 @@ def show_latest(repo_path: Path) -> None:
 
 # Server and client commands -------------------------------------------------------------------------------------------
 # --------- Clone -----------
-def client_clone(project_id: str, url: str) -> None:
-    config = madman_client_config()
+def client_clone(config: dict, project_id: str, url: str) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
     cmd = f"{command} server-clone {project_id} {url}"
@@ -123,8 +122,7 @@ def server_clone(project_id: str, url: str) -> None:
 
 
 # --------- Pull ----------
-def client_pull(project_id: str) -> None:
-    config = madman_client_config()
+def client_pull(config: dict, project_id: str) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
     cmd = f"{command} server-pull {project_id}"
@@ -147,8 +145,7 @@ def server_pull(project_id: str) -> None:
 
 
 # --------- Status ---------
-def client_status(project_id: str) -> None:
-    config = madman_client_config()
+def client_status(config: dict, project_id: str) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
     cmd = f"{command} server-status {project_id}"
@@ -163,8 +160,7 @@ def server_status(project_id: str) -> None:
 
 
 # --------- Delete ---------
-def client_delete(project_id: str) -> None:
-    config = madman_client_config()
+def client_delete(config: dict, project_id: str) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
     cmd = f"{command} server-delete {project_id}"
@@ -185,7 +181,7 @@ def server_delete(project_id: str) -> None:
 
 
 # --------- List ---------
-def client_list() -> None:
+def client_list(config: dict) -> None:
     config = madman_client_config()
     user, host, command = config["username"], config["host"], config['script_command']
 
@@ -227,7 +223,10 @@ def main() -> None:
     if options.command not in commands_map:
         print_error(f"Unknown command: {options.command}")
 
-    commands_map[options.command](*options.args)
+    if options.command in CLIENT_COMMANDS:
+        commands_map[options.command](madman_client_config(), *options.args)
+    elif options.command in SERVER_COMMANDS:
+        commands_map[options.command](*options.args)
 
 
 if __name__ == "__main__":

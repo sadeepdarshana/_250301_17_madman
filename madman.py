@@ -10,7 +10,7 @@ from typing import Any
 import json
 
 MADMAN_CLIENT_CONFIG = Path.home() / "madman-client-config.json"
-PROJECT_CONFIG = Path("madman.json")
+MADMAN_PROJECT_CONFIG = Path("madman.json")
 
 SCRIPT_DEFAULT_COMMAND = "python3 ~/madman/madman.py"
 
@@ -69,6 +69,11 @@ def madman_client_config() -> Any | None:
     if not get(config, 'script_command'):
         config['script_command'] = SCRIPT_DEFAULT_COMMAND
 
+    return config
+
+
+def madman_project_config() -> Any | None:
+    config = json.loads(MADMAN_PROJECT_CONFIG.read_text())
     return config
 
 
@@ -183,6 +188,24 @@ def server_delete(project_id: str) -> None:
         print_error(f"Failed to delete directory {repo_path}: {e}")
 
 
+# --------- Run ---------
+def client_run(config: dict, server_command: str, project_id: str) -> None:
+    user, host, command = config["username"], config["host"], config['script_command']
+
+    cmd = f"{command} {server_command} {project_id}"
+    sys.exit(run_ssh(user, host, cmd))
+
+
+def server_run(project_id: str) -> None:
+    config = madman_project_config()
+    assert_project_exists(project_id)
+    repo_path = PROJECTS_ROOT / project_id
+
+    show_latest(repo_path)
+
+    subprocess.run([config['run']])
+
+
 # --------- SSH ---------
 def client_ssh(config: dict, server_command: str, project_id: str = None) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
@@ -212,6 +235,7 @@ def main() -> None:
         ("pull", client_pull, server_pull),
         ("status", client_status, server_status),
         ("delete", client_delete, server_delete),
+        ("run", client_run, server_run),
         ("ssh", client_ssh, None),
         ("list", client_list, server_list)
     ]

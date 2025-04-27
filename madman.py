@@ -183,6 +183,12 @@ def server_delete(project_id: str) -> None:
         print_error(f"Failed to delete directory {repo_path}: {e}")
 
 
+# --------- SSH ---------
+def client_ssh(config: dict, server_command: str, project_id: str = None) -> None:
+    user, host, command = config["username"], config["host"], config['script_command']
+    sys.exit(run_ssh(user, host, ''))
+
+
 # --------- List ---------
 def client_list(config: dict, server_command: str) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
@@ -206,6 +212,7 @@ def main() -> None:
         ("pull", client_pull, server_pull),
         ("status", client_status, server_status),
         ("delete", client_delete, server_delete),
+        ("ssh", client_ssh, None),
         ("list", client_list, server_list)
     ]
 
@@ -221,12 +228,12 @@ def main() -> None:
         client_command, client_function, server_function = command
         server_command = get_server_command_for_client_command(client_command)
 
-        if options.command == client_command:
+        if options.command == client_command and client_function:
             validate_madman_client_config()
             client_function(madman_client_config(), server_command, *options.args)
             return
 
-        if options.command == server_command:
+        if options.command == server_command and server_function:
             server_function(*options.args)
             return
 

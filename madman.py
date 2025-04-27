@@ -203,7 +203,7 @@ def server_run(project_id: str) -> None:
 
     show_latest(repo_path)
 
-    subprocess.run(config['run'].split())
+    subprocess.run(config['run'].split(), cwd=repo_path)
 
 
 # --------- SSH ---------

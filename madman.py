@@ -7,11 +7,10 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+import json
 
-import yaml
-
-MADMAN_CLIENT_CONFIG = Path.home() / ".madman-client-config.yaml"
-PROJECT_CONFIG = Path("madman.yaml")
+MADMAN_CLIENT_CONFIG = Path.home() / "madman-client-config.json"
+PROJECT_CONFIG = Path("madman.json")
 
 SCRIPT_DEFAULT_COMMAND = "python3 ~/madman/madman.py"
 
@@ -59,7 +58,10 @@ def madman_client_config() -> Any | None:
     if not MADMAN_CLIENT_CONFIG.exists():
         return None
 
-    config = yaml.safe_load(MADMAN_CLIENT_CONFIG.read_text())
+    try:
+        config = json.loads(MADMAN_CLIENT_CONFIG.read_text())  # Use JSON loader
+    except:
+        return None
 
     if not get(config, 'script_command'):
         config['script_command'] = SCRIPT_DEFAULT_COMMAND
@@ -69,15 +71,15 @@ def madman_client_config() -> Any | None:
 
 def validate_madman_client_config() -> None:
     if not MADMAN_CLIENT_CONFIG.exists():
-        print_error("Madman client config not found at ~/.madman-client-config.yaml")
+        print_error(f"Madman client config not found at {MADMAN_CLIENT_CONFIG}")
 
     config = madman_client_config()
 
     if not config:
-        print_error("Madman client config (~/.madman-client-config.yaml) parsing error")
+        print_error(f"Madman client config ({MADMAN_CLIENT_CONFIG}) parsing error")
 
     if not get(config, "host") or not get(config, "username"):
-        print_error("host or username not found in Madman client config (~/.madman-client-config.yaml)")
+        print_error(f"host or username not found in Madman client config ({MADMAN_CLIENT_CONFIG})")
 
 
 # SSH helper

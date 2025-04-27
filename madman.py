@@ -228,7 +228,7 @@ def main() -> None:
             return
 
         if options.command == server_command:
-            server_function(madman_client_config(), *options.args)
+            server_function(*options.args)
             return
 
     print_error(f"Unknown command: {options.command}")

@@ -21,15 +21,15 @@ PROJECTS_ROOT = Path.home() / "madman" / "projects"
 
 
 def print_info(message: str) -> None:
-    print(f"{"\033[94m"}[INFO]{"\033[0m"} {message}", flush=True)
+    print(f"\033[94m[INFO]\033[0m {message}", flush=True)
 
 
 def print_success(message: str) -> None:
-    print(f"{"\033[92m"}[OK]{"\033[0m"} {message}", flush=True)
+    print(f"\033[92m[OK]\033[0m {message}", flush=True)
 
 
 def print_error(message: str) -> None:
-    print(f"{"\033[91m"}[ERROR]{"\033[0m"} {message}", file=sys.stderr, flush=True)
+    print(f"\033[91m[ERROR]\033[0m {message}", file=sys.stderr, flush=True)
     sys.exit(1)
 
 

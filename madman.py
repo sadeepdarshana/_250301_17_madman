@@ -197,7 +197,7 @@ def client_run(config: dict, server_command: str, project_id: str) -> None:
 
 
 def server_run(project_id: str) -> None:
-    config = madman_project_config()
+    config = madman_project_config(project_id)
     assert_project_exists(project_id)
     repo_path = PROJECTS_ROOT / project_id
 

@@ -61,8 +61,8 @@ def madman_client_config() -> Any | None:
 
     config = yaml.safe_load(MADMAN_CLIENT_CONFIG.read_text())
 
-    if not get(config, 'server.script_command'):
-        config['server']['script_command'] = SCRIPT_DEFAULT_COMMAND
+    if not get(config, 'script_command'):
+        config['script_command'] = SCRIPT_DEFAULT_COMMAND
 
     return config
 
@@ -76,8 +76,8 @@ def validate_madman_client_config() -> None:
     if not config:
         print_error("Madman client config (~/.madman-client-config.yaml) parsing error")
 
-    if not get(config, "server.host") or not get(config, "server.username"):
-        print_error("server.host or server.username not found in Madman client config (~/.madman-client-config.yaml)")
+    if not get(config, "host") or not get(config, "username"):
+        print_error("host or username not found in Madman client config (~/.madman-client-config.yaml)")
 
 
 # SSH helper
@@ -102,7 +102,7 @@ def show_latest(repo_path: Path) -> None:
 # --------- Clone -----------
 def client_clone(project_id: str, url: str) -> None:
     config = madman_client_config()
-    user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
+    user, host, command = config["username"], config["host"], config['script_command']
 
     cmd = f"{command} server-clone {project_id} {url}"
     sys.exit(run_ssh(user, host, cmd))
@@ -123,7 +123,7 @@ def server_clone(project_id: str, url: str) -> None:
 # --------- Pull ----------
 def client_pull(project_id: str) -> None:
     config = madman_client_config()
-    user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
+    user, host, command = config["username"], config["host"], config['script_command']
 
     cmd = f"{command} server-pull {project_id}"
     sys.exit(run_ssh(user, host, cmd))
@@ -147,7 +147,7 @@ def server_pull(project_id: str) -> None:
 # --------- Status ---------
 def client_status(project_id: str) -> None:
     config = madman_client_config()
-    user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
+    user, host, command = config["username"], config["host"], config['script_command']
 
     cmd = f"{command} server-status {project_id}"
     sys.exit(run_ssh(user, host, cmd))
@@ -163,7 +163,7 @@ def server_status(project_id: str) -> None:
 # --------- Delete ---------
 def client_delete(project_id: str) -> None:
     config = madman_client_config()
-    user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
+    user, host, command = config["username"], config["host"], config['script_command']
 
     cmd = f"{command} server-delete {project_id}"
     sys.exit(run_ssh(user, host, cmd))
@@ -185,7 +185,7 @@ def server_delete(project_id: str) -> None:
 # --------- List ---------
 def client_list() -> None:
     config = madman_client_config()
-    user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
+    user, host, command = config["username"], config["host"], config['script_command']
 
     cmd = f"{command} server-list"
     sys.exit(run_ssh(user, host, cmd))

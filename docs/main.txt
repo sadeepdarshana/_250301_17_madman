@@ -1,6 +1,5 @@
 Need to do on client first:
-    1. pip install pyyaml
-    2. Place madman.yaml in home (~) folder with system level values.
-    3. Place madman.yaml in project folder with project specific values.
+    2. Place .madmanrc in home (~) folder with with client config values.
+    3. Place .madman in project folder with project specific values.
 
 

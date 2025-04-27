@@ -14,8 +14,7 @@ PROJECT_CONFIG = Path("madman.json")
 
 SCRIPT_DEFAULT_COMMAND = "python3 ~/madman/madman.py"
 
-CLIENT_COMMANDS = ["clone", "pull", "status", "delete", "list"]
-SERVER_COMMANDS = ["server-clone", "server-pull", "server-status", "server-delete", "server-list"]
+SERVER_COMMAND_PREFIX = "server"
 
 PROJECTS_ROOT = Path.home() / "madman" / "projects"
 
@@ -52,6 +51,10 @@ def get(d: dict, path: str, default=None):
         else:
             return default
     return d
+
+
+def get_server_command_for_client_command(client_command):
+    return f"{SERVER_COMMAND_PREFIX}-{client_command}"
 
 
 def madman_client_config() -> Any | None:
@@ -102,10 +105,10 @@ def show_latest(repo_path: Path) -> None:
 
 # Server and client commands -------------------------------------------------------------------------------------------
 # --------- Clone -----------
-def client_clone(config: dict, project_id: str, url: str) -> None:
+def client_clone(config: dict, server_command: str, project_id: str, url: str) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
-    cmd = f"{command} server-clone {project_id} {url}"
+    cmd = f"{command} {server_command} {project_id} {url}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -122,10 +125,10 @@ def server_clone(project_id: str, url: str) -> None:
 
 
 # --------- Pull ----------
-def client_pull(config: dict, project_id: str) -> None:
+def client_pull(config: dict, server_command: str, project_id: str) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
-    cmd = f"{command} server-pull {project_id}"
+    cmd = f"{command} {server_command} {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -145,10 +148,10 @@ def server_pull(project_id: str) -> None:
 
 
 # --------- Status ---------
-def client_status(config: dict, project_id: str) -> None:
+def client_status(config: dict, server_command: str, project_id: str) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
-    cmd = f"{command} server-status {project_id}"
+    cmd = f"{command} {server_command} {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -160,10 +163,10 @@ def server_status(project_id: str) -> None:
 
 
 # --------- Delete ---------
-def client_delete(config: dict, project_id: str) -> None:
+def client_delete(config: dict, server_command: str, project_id: str) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
-    cmd = f"{command} server-delete {project_id}"
+    cmd = f"{command} {server_command} {project_id}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -181,11 +184,11 @@ def server_delete(project_id: str) -> None:
 
 
 # --------- List ---------
-def client_list(config: dict) -> None:
+def client_list(config: dict, server_command: str) -> None:
     config = madman_client_config()
     user, host, command = config["username"], config["host"], config['script_command']
 
-    cmd = f"{command} server-list"
+    cmd = f"{command} {server_command}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -199,34 +202,36 @@ def server_list() -> None:
 # ----------------------------------------------------------------------------------------------------------------------
 
 def main() -> None:
+    client_server_command_map = [
+        ("clone", client_clone, server_clone),
+        ("pull", client_pull, server_pull),
+        ("status", client_status, server_status),
+        ("delete", client_delete, server_delete),
+        ("list", client_list, server_list)
+    ]
+
+    client_commands = [command[0] for command in client_server_command_map]
+    server_commands = [get_server_command_for_client_command(command[0]) for command in client_server_command_map]
+
     parser = argparse.ArgumentParser("madman")
-    parser.add_argument("command", choices=CLIENT_COMMANDS + SERVER_COMMANDS)
+    parser.add_argument("command", choices=client_commands + server_commands)
     parser.add_argument("args", nargs=argparse.REMAINDER)
     options = parser.parse_args()
 
-    if options.command in CLIENT_COMMANDS:
-        validate_madman_client_config()
+    for command in client_server_command_map:
+        client_command, client_function, server_function = command
+        server_command = get_server_command_for_client_command(client_command)
 
-    commands_map = {
-        "clone": client_clone,
-        "server-clone": server_clone,
-        "pull": client_pull,
-        "server-pull": server_pull,
-        "status": client_status,
-        "server-status": server_status,
-        "delete": client_delete,
-        "server-delete": server_delete,
-        "list": client_list,
-        "server-list": server_list,
-    }
+        if options.command == client_command:
+            validate_madman_client_config()
+            client_function(madman_client_config(), server_command, *options.args)
+            return
 
-    if options.command not in commands_map:
-        print_error(f"Unknown command: {options.command}")
+        if options.command == server_command:
+            server_function(madman_client_config(), *options.args)
+            return
 
-    if options.command in CLIENT_COMMANDS:
-        commands_map[options.command](madman_client_config(), *options.args)
-    elif options.command in SERVER_COMMANDS:
-        commands_map[options.command](*options.args)
+    print_error(f"Unknown command: {options.command}")
 
 
 if __name__ == "__main__":

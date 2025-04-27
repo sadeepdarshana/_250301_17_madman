@@ -10,7 +10,7 @@ from typing import Any
 import json
 
 MADMAN_CLIENT_CONFIG = Path.home() / "madman-client-config.json"
-MADMAN_PROJECT_CONFIG = Path("madman.json")
+MADMAN_PROJECT_CONFIG_FILENAME = Path("madman.json")
 
 SCRIPT_DEFAULT_COMMAND = "python3 ~/madman/madman.py"
 
@@ -72,8 +72,8 @@ def madman_client_config() -> Any | None:
     return config
 
 
-def madman_project_config() -> Any | None:
-    config = json.loads(MADMAN_PROJECT_CONFIG.read_text())
+def madman_project_config(project_id) -> Any | None:
+    config = json.loads((PROJECTS_ROOT / project_id / MADMAN_PROJECT_CONFIG_FILENAME).read_text())
     return config
 
 

@@ -15,8 +15,8 @@ PROJECT_CONFIG = Path("madman.yaml")
 
 SCRIPT_DEFAULT_COMMAND = "python3 ~/madman/madman.py"
 
-CLIENT_COMMANDS = ["clone", "pull", "status", "delete"]
-SERVER_COMMANDS = ["server-clone", "server-pull", "server-status", "server-delete"]
+CLIENT_COMMANDS = ["clone", "pull", "status", "delete", "list"]
+SERVER_COMMANDS = ["server-clone", "server-pull", "server-status", "server-delete", "server-list"]
 
 PROJECTS_ROOT = Path.home() / "madman" / "projects"
 

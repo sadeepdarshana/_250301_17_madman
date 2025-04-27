@@ -1,6 +1,7 @@
 """Madman – Git pull/deploy helper (client + server)"""
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -181,6 +182,21 @@ def server_delete(project_id: str) -> None:
         print_error(f"Failed to delete directory {repo_path}: {e}")
 
 
+# --------- List ---------
+def client_list() -> None:
+    config = madman_client_config()
+    user, host, command = config["server"]["username"], config["server"]["host"], config['server']['script_command']
+
+    cmd = f"{command} server-list"
+    sys.exit(run_ssh(user, host, cmd))
+
+
+def server_list() -> None:
+    project_ids = [entry for entry in os.listdir(PROJECTS_ROOT) if os.path.isdir(os.path.join(PROJECTS_ROOT, entry))]
+
+    for project_id in project_ids:
+        print(project_id)
+
 # ----------------------------------------------------------------------------------------------------------------------
 
 def main() -> None:
@@ -201,6 +217,8 @@ def main() -> None:
         "server-status": server_status,
         "delete": client_delete,
         "server-delete": server_delete,
+        "list": client_list,
+        "server-list": server_list,
     }
 
     if options.command not in commands_map:

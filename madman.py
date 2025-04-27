@@ -185,7 +185,6 @@ def server_delete(project_id: str) -> None:
 
 # --------- List ---------
 def client_list(config: dict, server_command: str) -> None:
-    config = madman_client_config()
     user, host, command = config["username"], config["host"], config['script_command']
 
     cmd = f"{command} {server_command}"

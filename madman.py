@@ -6,10 +6,12 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
-MADMAN_CLIENT_CONFIG = Path.home() / ".madmanrc"
-PROJECT_CONFIG = Path("madman.yaml")  # Keep this as is since it's not being modified
+import yaml
+
+MADMAN_CLIENT_CONFIG = Path.home() / ".madman-client-config.yaml"
+PROJECT_CONFIG = Path("madman.yaml")
 
 SCRIPT_DEFAULT_COMMAND = "python3 ~/madman/madman.py"
 
@@ -20,15 +22,15 @@ PROJECTS_ROOT = Path.home() / "madman" / "projects"
 
 
 def print_info(message: str) -> None:
-    print(f"\033[94m[INFO]\033[0m {message}", flush=True)
+    print(f"{"\033[94m"}[INFO]{"\033[0m"} {message}", flush=True)
 
 
 def print_success(message: str) -> None:
-    print(f"\033[92m[OK]\033[0m {message}", flush=True)
+    print(f"{"\033[92m"}[OK]{"\033[0m"} {message}", flush=True)
 
 
 def print_error(message: str) -> None:
-    print(f"\033[91m[ERROR]\033[0m {message}", file=sys.stderr, flush=True)
+    print(f"{"\033[91m"}[ERROR]{"\033[0m"} {message}", file=sys.stderr, flush=True)
     sys.exit(1)
 
 
@@ -53,25 +55,13 @@ def get(d: dict, path: str, default=None):
     return d
 
 
-def madman_client_config() -> Dict[str, Any] | None:
+def madman_client_config() -> Any | None:
     if not MADMAN_CLIENT_CONFIG.exists():
         return None
 
-    config = {}
-    try:
-        with open(MADMAN_CLIENT_CONFIG, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-                if '=' in line:
-                    key, value = line.split('=', 1)
-                    config[key.strip()] = value.strip()
-    except Exception as e:
-        print_error(f"Error parsing config file: {e}")
-        return None
+    config = yaml.safe_load(MADMAN_CLIENT_CONFIG.read_text())
 
-    if 'script_command' not in config:
+    if not get(config, 'script_command'):
         config['script_command'] = SCRIPT_DEFAULT_COMMAND
 
     return config
@@ -79,15 +69,15 @@ def madman_client_config() -> Dict[str, Any] | None:
 
 def validate_madman_client_config() -> None:
     if not MADMAN_CLIENT_CONFIG.exists():
-        print_error(f"Madman client config not found at {MADMAN_CLIENT_CONFIG}")
+        print_error("Madman client config not found at ~/.madman-client-config.yaml")
 
     config = madman_client_config()
 
     if not config:
-        print_error(f"Madman client config ({MADMAN_CLIENT_CONFIG}) parsing error")
+        print_error("Madman client config (~/.madman-client-config.yaml) parsing error")
 
-    if 'host' not in config or 'username' not in config:
-        print_error(f"host or username not found in Madman client config ({MADMAN_CLIENT_CONFIG})")
+    if not get(config, "host") or not get(config, "username"):
+        print_error("host or username not found in Madman client config (~/.madman-client-config.yaml)")
 
 
 # SSH helper

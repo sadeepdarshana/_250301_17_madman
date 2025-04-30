@@ -18,6 +18,8 @@ SERVER_COMMAND_PREFIX = "server"
 
 PROJECTS_ROOT = Path.home() / "madman" / "projects"
 
+SYSTEMD_FILES_ROOT = Path('/etc/systemd/system')
+
 
 def print_info(message: str) -> None:
     print(f"\033[94m[INFO]\033[0m {message}", flush=True)
@@ -98,7 +100,60 @@ def validate_madman_client_config() -> None:
         print_error(f"host or username not found in Madman client config ({MADMAN_CLIENT_CONFIG})")
 
 
-# SSH helper
+def get_systemd_service_config(project_id: str):
+    project_config = madman_project_config(project_id)
+
+    run = project_config['run']
+    is_scheduled_task = 'schedule' in project_config
+
+    work_directory = PROJECTS_ROOT / project_id
+    service_type = 'oneshot' if is_scheduled_task else 'simple'
+    restart = 'no' if is_scheduled_task else 'always'
+
+    config = {
+        "Unit": {},
+        "Service": {
+            "Type": service_type,
+            "WorkingDirectory": work_directory,
+            "ExecStart": run,
+            "Restart": restart
+        }
+    }
+
+    if not is_scheduled_task:
+        config['Install'] = {
+            "WantedBy": "multi-user.target"
+        }
+
+    return config
+
+
+def get_systemd_timer_config(project_id: str):
+    project_config = madman_project_config(project_id)
+    schedule = project_config['schedule']
+
+    return {
+        "Unit": {},
+        "Timer": {
+            "OnCalendar": schedule,
+            "Persistent": "true"
+        }
+        ,
+        "Install": {
+            "WantedBy": "timers.target"
+        }
+    }
+
+
+def write_systemd_config_to_file(config: dict, path: str):
+    with open(path, 'w') as file:
+        for section_name, section in config.items():
+            file.write(f"[{section_name}]\n")
+
+            for key, value in config.items():
+                file.write(f"{key}={value}\n")
+
+
 def run_ssh(user: str, host: str, command: str) -> int:
     target = f"{user}@{host}"
     print_info(f"Running on {target}: {command}")
@@ -186,6 +241,23 @@ def server_run(project_id: str) -> None:
     subprocess.run(config['run'], cwd=repo_path)
 
 
+def server_deploy(project_id: str) -> None:
+    assert_project_exists(project_id)
+    config = madman_project_config(project_id)
+
+    service_config = get_systemd_service_config(project_id)
+    write_systemd_config_to_file(service_config, f'{SYSTEMD_FILES_ROOT / project_id}.service')
+
+    if 'schedule' in config:
+        timer_config = get_systemd_timer_config(project_id)
+        write_systemd_config_to_file(timer_config, f'{SYSTEMD_FILES_ROOT / project_id}.timer')
+        subprocess.run(["systemctl", "daemon-reload"], check=True)
+        subprocess.run(["systemctl", "enable", "--now", f"{project_id}.timer"], check=True)
+    else:
+        subprocess.run(["systemctl", "daemon-reload"], check=True)
+        subprocess.run(["systemctl", "enable", "--now", f"{project_id}.service"], check=True)
+
+
 def server_list() -> None:
     project_ids = [entry for entry in os.listdir(PROJECTS_ROOT) if os.path.isdir(os.path.join(PROJECTS_ROOT, entry))]
 
@@ -202,6 +274,7 @@ def main() -> None:
         ("status", client_default, server_status),
         ("delete", client_default, server_delete),
         ("run", client_default, server_run),
+        ("deploy", client_default, server_deploy),
         ("ssh", client_ssh, None),
         ("list", client_default, server_list)
     ]

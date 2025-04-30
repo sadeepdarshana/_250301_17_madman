@@ -150,7 +150,7 @@ def write_systemd_config_to_file(config: dict, path: str):
         for section_name, section in config.items():
             file.write(f"[{section_name}]\n")
 
-            for key, value in config.items():
+            for key, value in section.items():
                 file.write(f"{key}={value}\n")
 
 

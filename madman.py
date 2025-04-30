@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from subprocess import CompletedProcess
 from typing import Any, List
 import json
 
@@ -153,7 +154,7 @@ def write_systemd_config_to_file(config: dict, path: str):
                 file.write(f"{key}={value}\n")
 
 
-def run_command_line(command: str, cwd=Path.home()) -> int:
+def run_command_line(command: str, cwd=Path.home()) -> CompletedProcess[bytes]:
     return subprocess.run(command, check=True, shell=True, cwd=cwd)
 
 

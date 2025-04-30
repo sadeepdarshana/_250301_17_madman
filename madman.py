@@ -160,7 +160,7 @@ def run_command_line(command: str, cwd=Path.home()) -> int:
 def run_ssh(user: str, host: str, command: str) -> int:
     target = f"{user}@{host}"
     print_info(f"Running on {target}: {command}")
-    return run_command_line(f"ssh {target} {command}")
+    return run_command_line(f"ssh {target} {command}").returncode
 
 
 # Print latest commit info

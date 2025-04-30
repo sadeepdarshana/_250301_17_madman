@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 import json
 
 MADMAN_CLIENT_CONFIG = Path.home() / "madman-client-config.json"
@@ -110,10 +110,10 @@ def show_latest(repo_path: Path) -> None:
 
 # Server and client commands -------------------------------------------------------------------------------------------
 # --------- Clone -----------
-def client_clone(config: dict, server_command: str, project_id: str, url: str) -> None:
+def client_default(config: dict, server_command: str, args: List[str]) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
-    cmd = f"{command} {server_command} {project_id} {url}"
+    cmd = f"{command} {server_command} {' '.join(args)}"
     sys.exit(run_ssh(user, host, cmd))
 
 
@@ -130,11 +130,6 @@ def server_clone(project_id: str, url: str) -> None:
 
 
 # --------- Pull ----------
-def client_pull(config: dict, server_command: str, project_id: str) -> None:
-    user, host, command = config["username"], config["host"], config['script_command']
-
-    cmd = f"{command} {server_command} {project_id}"
-    sys.exit(run_ssh(user, host, cmd))
 
 
 def server_pull(project_id: str) -> None:
@@ -153,11 +148,6 @@ def server_pull(project_id: str) -> None:
 
 
 # --------- Status ---------
-def client_status(config: dict, server_command: str, project_id: str) -> None:
-    user, host, command = config["username"], config["host"], config['script_command']
-
-    cmd = f"{command} {server_command} {project_id}"
-    sys.exit(run_ssh(user, host, cmd))
 
 
 def server_status(project_id: str) -> None:
@@ -168,12 +158,6 @@ def server_status(project_id: str) -> None:
 
 
 # --------- Delete ---------
-def client_delete(config: dict, server_command: str, project_id: str) -> None:
-    user, host, command = config["username"], config["host"], config['script_command']
-
-    cmd = f"{command} {server_command} {project_id}"
-    sys.exit(run_ssh(user, host, cmd))
-
 
 def server_delete(project_id: str) -> None:
     assert_project_exists(project_id)
@@ -189,12 +173,6 @@ def server_delete(project_id: str) -> None:
 
 
 # --------- Run ---------
-def client_run(config: dict, server_command: str, project_id: str) -> None:
-    user, host, command = config["username"], config["host"], config['script_command']
-
-    cmd = f"{command} {server_command} {project_id}"
-    sys.exit(run_ssh(user, host, cmd))
-
 
 def server_run(project_id: str) -> None:
     assert_project_exists(project_id)
@@ -211,12 +189,6 @@ def client_ssh(config: dict, server_command: str, project_id: str = None) -> Non
 
 
 # --------- List ---------
-def client_list(config: dict, server_command: str) -> None:
-    user, host, command = config["username"], config["host"], config['script_command']
-
-    cmd = f"{command} {server_command}"
-    sys.exit(run_ssh(user, host, cmd))
-
 
 def server_list() -> None:
     project_ids = [entry for entry in os.listdir(PROJECTS_ROOT) if os.path.isdir(os.path.join(PROJECTS_ROOT, entry))]
@@ -229,13 +201,13 @@ def server_list() -> None:
 
 def main() -> None:
     client_server_command_map = [
-        ("clone", client_clone, server_clone),
-        ("pull", client_pull, server_pull),
-        ("status", client_status, server_status),
-        ("delete", client_delete, server_delete),
-        ("run", client_run, server_run),
+        ("clone", client_default, server_clone),
+        ("pull", client_default, server_pull),
+        ("status", client_default, server_status),
+        ("delete", client_default, server_delete),
+        ("run", client_default, server_run),
         ("ssh", client_ssh, None),
-        ("list", client_list, server_list)
+        ("list", client_default, server_list)
     ]
 
     client_commands = [command[0] for command in client_server_command_map]
@@ -252,7 +224,7 @@ def main() -> None:
 
         if options.command == client_command and client_function:
             validate_madman_client_config()
-            client_function(madman_client_config(), server_command, *options.args)
+            client_function(madman_client_config(), server_command, options.args)
             return
 
         if options.command == server_command and server_function:

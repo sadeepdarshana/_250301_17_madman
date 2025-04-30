@@ -109,7 +109,7 @@ def show_latest(repo_path: Path) -> None:
 
 
 # Server and client commands -------------------------------------------------------------------------------------------
-# --------- Clone -----------
+# --------- Client -----------
 def client_default(config: dict, server_command: str, args: List[str]) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
@@ -117,6 +117,12 @@ def client_default(config: dict, server_command: str, args: List[str]) -> None:
     sys.exit(run_ssh(user, host, cmd))
 
 
+def client_ssh(config: dict, server_command: str, project_id: str = None) -> None:
+    user, host, command = config["username"], config["host"], config['script_command']
+    sys.exit(run_ssh(user, host, ''))
+
+
+# --------- Server -----------
 def server_clone(project_id: str, url: str) -> None:
     assert_project_not_exists(project_id)
     repo_path = PROJECTS_ROOT / project_id
@@ -127,9 +133,6 @@ def server_clone(project_id: str, url: str) -> None:
     print_success('Clone successful')
 
     show_latest(repo_path)
-
-
-# --------- Pull ----------
 
 
 def server_pull(project_id: str) -> None:
@@ -147,17 +150,12 @@ def server_pull(project_id: str) -> None:
     show_latest(repo_path)
 
 
-# --------- Status ---------
-
-
 def server_status(project_id: str) -> None:
     assert_project_exists(project_id)
     repo_path = PROJECTS_ROOT / project_id
 
     show_latest(repo_path)
 
-
-# --------- Delete ---------
 
 def server_delete(project_id: str) -> None:
     assert_project_exists(project_id)
@@ -172,8 +170,6 @@ def server_delete(project_id: str) -> None:
         print_error(f"Failed to delete directory {repo_path}: {e}")
 
 
-# --------- Run ---------
-
 def server_run(project_id: str) -> None:
     assert_project_exists(project_id)
     config = madman_project_config(project_id)
@@ -181,14 +177,6 @@ def server_run(project_id: str) -> None:
 
     subprocess.run(config['run'], cwd=repo_path)
 
-
-# --------- SSH ---------
-def client_ssh(config: dict, server_command: str, project_id: str = None) -> None:
-    user, host, command = config["username"], config["host"], config['script_command']
-    sys.exit(run_ssh(user, host, ''))
-
-
-# --------- List ---------
 
 def server_list() -> None:
     project_ids = [entry for entry in os.listdir(PROJECTS_ROOT) if os.path.isdir(os.path.join(PROJECTS_ROOT, entry))]

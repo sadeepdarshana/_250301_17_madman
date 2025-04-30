@@ -188,7 +188,7 @@ def server_list() -> None:
 # ----------------------------------------------------------------------------------------------------------------------
 
 def main() -> None:
-    client_server_command_map = [
+    command_configurations = [
         ("clone", client_default, server_clone),
         ("pull", client_default, server_pull),
         ("status", client_default, server_status),
@@ -198,16 +198,16 @@ def main() -> None:
         ("list", client_default, server_list)
     ]
 
-    client_commands = [command[0] for command in client_server_command_map]
-    server_commands = [get_server_command_for_client_command(command[0]) for command in client_server_command_map]
+    client_commands = [command[0] for command in command_configurations]
+    server_commands = [get_server_command_for_client_command(command[0]) for command in command_configurations]
 
     parser = argparse.ArgumentParser("madman")
     parser.add_argument("command", choices=client_commands + server_commands)
     parser.add_argument("args", nargs=argparse.REMAINDER)
     options = parser.parse_args()
 
-    for command in client_server_command_map:
-        client_command, client_function, server_function = command
+    for command_configuration in command_configurations:
+        client_command, client_function, server_function = command_configuration
         server_command = get_server_command_for_client_command(client_command)
 
         if options.command == client_command and client_function:

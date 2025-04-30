@@ -237,7 +237,7 @@ def server_run(project_id: str) -> None:
     config = madman_project_config(project_id)
     repo_path = PROJECTS_ROOT / project_id
 
-    subprocess.run(config['run'], cwd=repo_path)
+    subprocess.run(config['run'], cwd=repo_path, shell=True)
 
 
 def server_deploy(project_id: str) -> None:

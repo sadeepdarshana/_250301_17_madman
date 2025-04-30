@@ -103,7 +103,7 @@ def validate_madman_client_config() -> None:
 def get_systemd_service_config(project_id: str):
     project_config = madman_project_config(project_id)
 
-    run = " ".join(project_config['run'])
+    run = project_config['run']
     is_scheduled_task = 'schedule' in project_config
 
     work_directory = PROJECTS_ROOT / project_id

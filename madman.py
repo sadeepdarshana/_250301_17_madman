@@ -166,7 +166,7 @@ def undeploy_timer_and_service(project_id):
 
 
 def run_command_line(command: str, cwd=Path.home(), check=True, no_logs=False) -> CompletedProcess[bytes]:
-    return subprocess.run(command, check=check, shell=True, cwd=cwd, stdout=subprocess.DEVNULL if no_logs else None)
+    return subprocess.run(command, check=check, shell=True, cwd=cwd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def delete_file(path):

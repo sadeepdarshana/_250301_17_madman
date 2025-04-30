@@ -117,7 +117,7 @@ def client_default(config: dict, server_command: str, args: List[str]) -> None:
     sys.exit(run_ssh(user, host, cmd))
 
 
-def client_ssh(config: dict, server_command: str, project_id: str = None) -> None:
+def client_ssh(config: dict, server_command: str, args: List[str]) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
     sys.exit(run_ssh(user, host, ''))
 

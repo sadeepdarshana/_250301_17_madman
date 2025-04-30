@@ -37,9 +37,7 @@ def parse_args(all_commands):
     parser.add_argument("command", choices=all_commands)
     parser.add_argument("args", nargs=argparse.REMAINDER)
     options = parser.parse_args()
-    command = options.command
-    command_args = options.args
-    return command, command_args
+    return options.command, options.args
 
 
 def assert_project_exists(project_id: str):

@@ -153,10 +153,14 @@ def write_systemd_config_to_file(config: dict, path: str):
                 file.write(f"{key}={value}\n")
 
 
+def run_command_line(command: str, cwd=Path.home()) -> int:
+    return subprocess.run(command, check=True, shell=True, cwd=cwd)
+
+
 def run_ssh(user: str, host: str, command: str) -> int:
     target = f"{user}@{host}"
     print_info(f"Running on {target}: {command}")
-    return subprocess.run(["ssh", target, command]).returncode
+    return run_command_line(f"ssh {target} {command}")
 
 
 # Print latest commit info
@@ -191,7 +195,7 @@ def server_clone(project_id: str, url: str) -> None:
     repo_path.parent.mkdir(parents=True, exist_ok=True)
 
     print_info(f"Cloning {url} into {repo_path}")
-    subprocess.run(["git", "clone", "--quiet", url, str(repo_path)], check=True)
+    run_command_line(f"git clone --quiet {url} {str(repo_path)}")
     print_success('Clone successful')
 
     show_latest(repo_path)
@@ -205,8 +209,8 @@ def server_pull(project_id: str) -> None:
 
     git_branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=repo_path, text=True).strip()
     print_info(f"Synchronizing to origin/{git_branch} …")
-    subprocess.run(["git", "fetch", "--quiet", "origin"], cwd=repo_path, check=True)
-    subprocess.run(["git", "reset", "--quiet", "--hard", f"origin/{git_branch}"], cwd=repo_path, check=True)
+    run_command_line(f"git fetch --quiet origin", repo_path)
+    run_command_line(f"git reset --quiet --hard origin/{git_branch}", repo_path)
     print_success('Pull successful')
 
     show_latest(repo_path)
@@ -237,7 +241,7 @@ def server_run(project_id: str) -> None:
     config = madman_project_config(project_id)
     repo_path = PROJECTS_ROOT / project_id
 
-    subprocess.run(config['run'], cwd=repo_path, shell=True)
+    run_command_line(config['run'], repo_path)
 
 
 def server_deploy(project_id: str) -> None:
@@ -250,11 +254,11 @@ def server_deploy(project_id: str) -> None:
     if 'schedule' in config:
         timer_config = get_systemd_timer_config(project_id)
         write_systemd_config_to_file(timer_config, f'{SYSTEMD_FILES_ROOT / project_id}.timer')
-        subprocess.run("systemctl daemon-reload", check=True, shell=True)
-        subprocess.run(f"systemctl enable --now {project_id}.timer", check=True, shell=True)
+        run_command_line("systemctl daemon-reload")
+        run_command_line(f"systemctl enable --now {project_id}.timer")
     else:
-        subprocess.run("systemctl daemon-reload", check=True)
-        subprocess.run(f"systemctl enable --now {project_id}.service", check=True, shell=True)
+        run_command_line("systemctl daemon-reload")
+        run_command_line(f"systemctl enable --now {project_id}.service")
 
 
 def server_list() -> None:

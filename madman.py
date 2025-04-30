@@ -32,6 +32,16 @@ def print_error(message: str) -> None:
     sys.exit(1)
 
 
+def parse_args(all_commands):
+    parser = argparse.ArgumentParser("madman")
+    parser.add_argument("command", choices=all_commands)
+    parser.add_argument("args", nargs=argparse.REMAINDER)
+    options = parser.parse_args()
+    command = options.command
+    command_args = options.args
+    return command, command_args
+
+
 def assert_project_exists(project_id: str):
     if not (PROJECTS_ROOT / project_id / ".git").exists():
         print_error(f"Project with ID '{project_id}' not found on server")
@@ -53,7 +63,7 @@ def get(d: dict, path: str, default=None):
     return d
 
 
-def get_server_command_for_client_command(client_command):
+def get_server_command(client_command):
     return f"{SERVER_COMMAND_PREFIX}-{client_command}"
 
 
@@ -188,7 +198,7 @@ def server_list() -> None:
 # ----------------------------------------------------------------------------------------------------------------------
 
 def main() -> None:
-    command_configurations = [
+    command_configs = [
         ("clone", client_default, server_clone),
         ("pull", client_default, server_pull),
         ("status", client_default, server_status),
@@ -198,28 +208,25 @@ def main() -> None:
         ("list", client_default, server_list)
     ]
 
-    client_commands = [command[0] for command in command_configurations]
-    server_commands = [get_server_command_for_client_command(command[0]) for command in command_configurations]
+    client_commands = [i[0] for i in command_configs]
+    server_commands = [get_server_command(i) for i in client_commands]
 
-    parser = argparse.ArgumentParser("madman")
-    parser.add_argument("command", choices=client_commands + server_commands)
-    parser.add_argument("args", nargs=argparse.REMAINDER)
-    options = parser.parse_args()
+    command, command_args = parse_args(client_commands + server_commands)
 
-    for command_configuration in command_configurations:
-        client_command, client_function, server_function = command_configuration
-        server_command = get_server_command_for_client_command(client_command)
+    for config in command_configs:
+        client_command, client_function, server_function = config
+        server_command = get_server_command(client_command)
 
-        if options.command == client_command and client_function:
+        if command == client_command and client_function:
             validate_madman_client_config()
-            client_function(madman_client_config(), server_command, options.args)
+            client_function(madman_client_config(), server_command, command_args)
             return
 
-        if options.command == server_command and server_function:
-            server_function(*options.args)
+        if command == server_command and server_function:
+            server_function(*command_args)
             return
 
-    print_error(f"Unknown command: {options.command}")
+    print_error(f"Unknown command: {command}")
 
 
 if __name__ == "__main__":

@@ -137,8 +137,7 @@ def get_systemd_timer_config(project_id: str):
         "Timer": {
             "OnCalendar": schedule,
             "Persistent": "true"
-        }
-        ,
+        },
         "Install": {
             "WantedBy": "timers.target"
         }

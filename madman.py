@@ -250,11 +250,11 @@ def server_deploy(project_id: str) -> None:
     if 'schedule' in config:
         timer_config = get_systemd_timer_config(project_id)
         write_systemd_config_to_file(timer_config, f'{SYSTEMD_FILES_ROOT / project_id}.timer')
-        subprocess.run(["systemctl", "daemon-reload"], check=True)
-        subprocess.run(["systemctl", "enable", "--now", f"{project_id}.timer"], check=True)
+        subprocess.run("systemctl daemon-reload", check=True, shell=True)
+        subprocess.run(f"systemctl enable --now {project_id}.timer", check=True, shell=True)
     else:
-        subprocess.run(["systemctl", "daemon-reload"], check=True)
-        subprocess.run(["systemctl", "enable", "--now", f"{project_id}.service"], check=True)
+        subprocess.run("systemctl daemon-reload", check=True)
+        subprocess.run(f"systemctl enable --now {project_id}.service", check=True, shell=True)
 
 
 def server_list() -> None:

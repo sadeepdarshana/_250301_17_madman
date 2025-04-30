@@ -157,16 +157,16 @@ def write_systemd_config_to_file(config: dict, path: str):
 
 
 def undeploy_timer_and_service(project_id):
-    run_command_line(f"systemctl disable {project_id}.timer", check=False)
-    run_command_line(f"systemctl disable {project_id}.service", check=False)
-    run_command_line(f"systemctl stop {project_id}.timer", check=False)
-    run_command_line(f"systemctl stop {project_id}.service", check=False)
+    run_command_line(f"systemctl disable {project_id}.timer", check=False, no_logs=True)
+    run_command_line(f"systemctl disable {project_id}.service", check=False, no_logs=True)
+    run_command_line(f"systemctl stop {project_id}.timer", check=False, no_logs=True)
+    run_command_line(f"systemctl stop {project_id}.service", check=False, no_logs=True)
     delete_file(SYSTEMD_FILES_ROOT / f"{project_id}.service")
     delete_file(SYSTEMD_FILES_ROOT / f"{project_id}.timer")
 
 
-def run_command_line(command: str, cwd=Path.home(), check=True) -> CompletedProcess[bytes]:
-    return subprocess.run(command, check=check, shell=True, cwd=cwd)
+def run_command_line(command: str, cwd=Path.home(), check=True, no_logs=False) -> CompletedProcess[bytes]:
+    return subprocess.run(command, check=check, shell=True, cwd=cwd, stdout=subprocess.DEVNULL if no_logs else None)
 
 
 def delete_file(path):

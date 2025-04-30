@@ -101,7 +101,7 @@ def validate_madman_client_config() -> None:
         print_error(f"host or username not found in Madman client config ({MADMAN_CLIENT_CONFIG})")
 
 
-def get_systemd_service_config(project_id: str):
+def write_systemd_service_config(project_id: str):
     project_config = madman_project_config(project_id)
 
     run = project_config['run']
@@ -126,14 +126,14 @@ def get_systemd_service_config(project_id: str):
             "WantedBy": "multi-user.target"
         }
 
-    return config
+    write_systemd_config_to_file(config, f'{SYSTEMD_FILES_ROOT / project_id}.service')
 
 
-def get_systemd_timer_config(project_id: str):
+def write_systemd_timer_config(project_id: str):
     project_config = madman_project_config(project_id)
     schedule = project_config['schedule']
 
-    return {
+    config = {
         "Unit": {},
         "Timer": {
             "OnCalendar": schedule,
@@ -143,6 +143,8 @@ def get_systemd_timer_config(project_id: str):
             "WantedBy": "timers.target"
         }
     }
+
+    write_systemd_config_to_file(config, f'{SYSTEMD_FILES_ROOT / project_id}.timer')
 
 
 def write_systemd_config_to_file(config: dict, path: str):
@@ -154,8 +156,22 @@ def write_systemd_config_to_file(config: dict, path: str):
                 file.write(f"{key}={value}\n")
 
 
-def run_command_line(command: str, cwd=Path.home()) -> CompletedProcess[bytes]:
-    return subprocess.run(command, check=True, shell=True, cwd=cwd)
+def undeploy_timer_and_service(project_id):
+    run_command_line(f"systemctl disable {project_id}.timer", check=False)
+    run_command_line(f"systemctl disable {project_id}.service", check=False)
+    run_command_line(f"systemctl stop {project_id}.timer", check=False)
+    run_command_line(f"systemctl stop {project_id}.service", check=False)
+    delete_file(SYSTEMD_FILES_ROOT / f"{project_id}.service")
+    delete_file(SYSTEMD_FILES_ROOT / f"{project_id}.timer")
+
+
+def run_command_line(command: str, cwd=Path.home(), check=True) -> CompletedProcess[bytes]:
+    return subprocess.run(command, check=check, shell=True, cwd=cwd)
+
+
+def delete_file(path):
+    if os.path.exists(path):
+        os.remove(path)
 
 
 def run_ssh(user: str, host: str, command: str) -> int:
@@ -249,12 +265,11 @@ def server_deploy(project_id: str) -> None:
     assert_project_exists(project_id)
     config = madman_project_config(project_id)
 
-    service_config = get_systemd_service_config(project_id)
-    write_systemd_config_to_file(service_config, f'{SYSTEMD_FILES_ROOT / project_id}.service')
+    undeploy_timer_and_service(project_id)
+    write_systemd_service_config(project_id)
 
     if 'schedule' in config:
-        timer_config = get_systemd_timer_config(project_id)
-        write_systemd_config_to_file(timer_config, f'{SYSTEMD_FILES_ROOT / project_id}.timer')
+        write_systemd_timer_config(project_id)
         run_command_line("systemctl daemon-reload")
         run_command_line(f"systemctl enable --now {project_id}.timer")
     else:

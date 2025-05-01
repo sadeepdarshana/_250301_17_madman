@@ -170,6 +170,21 @@ def convert_git_url(url: str) -> str:
     fail("Invalid git repo URL")
 
 
+def get_git_remote_url():
+    try:
+        result = subprocess.run(
+            "git remote get-url origin",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=True,
+            shell=True
+        )
+        return result.stdout.strip()
+    except:
+        fail("Could find git remote url")
+
+
 def write_systemd_config_to_file(config: dict, path: str):
     with open(path, 'w') as file:
         for section_name, section in config.items():
@@ -220,6 +235,15 @@ def show_latest(repo_path: Path) -> None:
 def client_default(config: dict, server_command: str, args: List[str]) -> None:
     user, host, command = config["username"], config["host"], config['script_command']
 
+    cmd = f"{command} {server_command} {' '.join(args)}"
+    sys.exit(run_ssh(user, host, cmd))
+
+
+def client_clone(config: dict, server_command: str, args: List[str]) -> None:
+    user, host, command = config["username"], config["host"], config['script_command']
+
+    if args[1] == 'this':
+        args[1] = get_git_remote_url()
     cmd = f"{command} {server_command} {' '.join(args)}"
     sys.exit(run_ssh(user, host, cmd))
 
@@ -318,7 +342,7 @@ def server_list() -> None:
 
 def main() -> None:
     command_configs = [
-        ("clone", client_default, server_clone),
+        ("clone", client_clone, server_clone),
         ("pull", client_default, server_pull),
         ("status", client_default, server_status),
         ("delete", client_default, server_delete),

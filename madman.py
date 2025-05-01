@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -28,6 +29,10 @@ def print_info(message: str) -> None:
 
 def print_success(message: str) -> None:
     print(f"\033[92m[OK]\033[0m {message}", flush=True)
+
+
+def print_error(message: str) -> None:
+    print(f"\033[91m[ERROR]\033[0m {message}", file=sys.stderr, flush=True)
 
 
 def fail(message: str) -> None:
@@ -147,6 +152,24 @@ def write_systemd_timer_config(project_id: str):
     write_systemd_config_to_file(config, f'{SYSTEMD_FILES_ROOT / project_id}.timer')
 
 
+def convert_git_url(url: str) -> str:
+    # Convert HTTPS → SSH
+    https_pattern = re.compile(r'https://([^/]+)/([^/]+)/(.+?)(\.git)?$')
+    match = https_pattern.match(url)
+    if match:
+        domain, user, repo, _ = match.groups()
+        return f'git@{domain}:{user}/{repo}.git'
+
+    # Convert SSH → HTTPS
+    ssh_pattern = re.compile(r'git@([^:]+):([^/]+)/(.+?)(\.git)?$')
+    match = ssh_pattern.match(url)
+    if match:
+        domain, user, repo, _ = match.groups()
+        return f'https://{domain}/{user}/{repo}.git'
+
+    fail("Invalid git repo URL")
+
+
 def write_systemd_config_to_file(config: dict, path: str):
     with open(path, 'w') as file:
         for section_name, section in config.items():
@@ -213,8 +236,14 @@ def server_clone(project_id: str, url: str) -> None:
     repo_path.parent.mkdir(parents=True, exist_ok=True)
 
     print_info(f"Cloning {url} into {repo_path}")
-    run_command_line(f"git clone --quiet {url} {str(repo_path)}")
-    print_success('Clone successful')
+    try:
+        run_command_line(f"git clone --quiet {url} {str(repo_path)}")
+    except:
+        print_error(f"Failed to clone {url}.")
+        url = convert_git_url(url)
+        print_info(f"Trying to clone {convert_git_url(url)}.")
+        run_command_line(f"git clone --quiet {url} {str(repo_path)}")
+    print_success(f'Successful cloned {url}')
 
     show_latest(repo_path)
 

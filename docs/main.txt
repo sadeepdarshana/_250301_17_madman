@@ -12,3 +12,6 @@ Need to do on client first:
 # configless (fully cmd based)
 # multiple deployments
 # install on VPS / client script sh with curl
+# undeploy command
+# deployment info to list command
+# web-ui via server

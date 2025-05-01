@@ -241,7 +241,7 @@ def server_clone(project_id: str, url: str) -> None:
     except:
         print_error(f"Failed to clone {url}.")
         url = convert_git_url(url)
-        print_info(f"Trying to clone {convert_git_url(url)}.")
+        print_info(f"Trying to clone {url}.")
         run_command_line(f"git clone --quiet {url} {str(repo_path)}")
     print_success(f'Successful cloned {url}')
 

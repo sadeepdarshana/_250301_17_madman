@@ -334,7 +334,7 @@ def server_deploy(project_id: str) -> None:
 def server_undeploy(project_id: str) -> None:
     assert_project_exists(project_id)
     undeploy_timer_and_service(project_id)
-    print_info(f"All deployments removed")
+    print_info(f"All deployments removed for {project_id}")
 
 
 def server_list() -> None:

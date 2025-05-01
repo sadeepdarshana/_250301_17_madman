@@ -331,6 +331,12 @@ def server_deploy(project_id: str) -> None:
         run_command_line(f"systemctl enable --now {project_id}.service")
 
 
+def server_undeploy(project_id: str) -> None:
+    assert_project_exists(project_id)
+    undeploy_timer_and_service(project_id)
+    print_info(f"All deployments removed")
+
+
 def server_list() -> None:
     project_ids = [entry for entry in os.listdir(PROJECTS_ROOT) if os.path.isdir(os.path.join(PROJECTS_ROOT, entry))]
 
@@ -348,6 +354,7 @@ def main() -> None:
         ("delete", client_default, server_delete),
         ("run", client_default, server_run),
         ("deploy", client_default, server_deploy),
+        ("undeploy", client_default, server_undeploy),
         ("ssh", client_ssh, None),
         ("list", client_default, server_list)
     ]

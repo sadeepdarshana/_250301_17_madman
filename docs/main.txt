@@ -3,3 +3,12 @@ Need to do on client first:
     3. Place .madman in project folder with project specific values.
 
 
+
+
+# Git SSH <-> HTTP url convertion
+# madman clone x this
+# nginx web page
+# check 24x7 server
+# configless (fully cmd based)
+# multiple deployments
+# install on VPS / client script sh with curl

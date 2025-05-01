@@ -30,7 +30,7 @@ def print_success(message: str) -> None:
     print(f"\033[92m[OK]\033[0m {message}", flush=True)
 
 
-def print_error(message: str) -> None:
+def fail(message: str) -> None:
     print(f"\033[91m[ERROR]\033[0m {message}", file=sys.stderr, flush=True)
     sys.exit(1)
 
@@ -45,13 +45,13 @@ def parse_args(all_commands):
 
 def assert_project_exists(project_id: str):
     if not (PROJECTS_ROOT / project_id / ".git").exists():
-        print_error(f"Project with ID '{project_id}' not found on server")
+        fail(f"Project with ID '{project_id}' not found on server")
 
 
 def assert_project_not_exists(project_id: str):
     repo_path = PROJECTS_ROOT / project_id
     if repo_path.exists():
-        print_error(f"Project with ID '{project_id}' already exists on server")
+        fail(f"Project with ID '{project_id}' already exists on server")
 
 
 def get(d: dict, path: str, default=None):
@@ -90,15 +90,15 @@ def madman_project_config(project_id) -> Any | None:
 
 def validate_madman_client_config() -> None:
     if not MADMAN_CLIENT_CONFIG.exists():
-        print_error(f"Madman client config not found at {MADMAN_CLIENT_CONFIG}")
+        fail(f"Madman client config not found at {MADMAN_CLIENT_CONFIG}")
 
     config = madman_client_config()
 
     if not config:
-        print_error(f"Madman client config ({MADMAN_CLIENT_CONFIG}) parsing error")
+        fail(f"Madman client config ({MADMAN_CLIENT_CONFIG}) parsing error")
 
     if not get(config, "host") or not get(config, "username"):
-        print_error(f"host or username not found in Madman client config ({MADMAN_CLIENT_CONFIG})")
+        fail(f"host or username not found in Madman client config ({MADMAN_CLIENT_CONFIG})")
 
 
 def write_systemd_service_config(project_id: str):
@@ -251,7 +251,7 @@ def server_delete(project_id: str) -> None:
         shutil.rmtree(repo_path)
         print_success(f"Successfully deleted project")
     except Exception as e:
-        print_error(f"Failed to delete directory {repo_path}: {e}")
+        fail(f"Failed to delete directory {repo_path}: {e}")
 
 
 def server_run(project_id: str) -> None:
@@ -317,7 +317,7 @@ def main() -> None:
             server_function(*command_args)
             return
 
-    print_error(f"Unknown command: {command}")
+    fail(f"Unknown command: {command}")
 
 
 if __name__ == "__main__":

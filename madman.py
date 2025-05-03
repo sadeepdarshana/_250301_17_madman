@@ -152,7 +152,7 @@ def write_systemd_timer_config(project_id: str):
     write_systemd_config_to_file(config, f'{SYSTEMD_FILES_ROOT / project_id}.timer')
 
 
-def convert_git_url(url: str) -> str:
+def convert_git_url(url: str) -> str | None:
     # Convert HTTPS → SSH
     https_pattern = re.compile(r'https://([^/]+)/([^/]+)/(.+?)(\.git)?$')
     match = https_pattern.match(url)

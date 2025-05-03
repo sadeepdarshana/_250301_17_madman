@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import sys
+from functools import lru_cache
 from pathlib import Path
 from subprocess import CompletedProcess
 from typing import Any, List
@@ -92,6 +93,7 @@ def get_systemd_id(project_id, config_name):
     return f"{project_id}_{config_name}"
 
 
+@lru_cache(maxsize=None)
 def madman_project_config(project_id, config_name) -> Any | None:
     print_info("Reading project config file")
     try:

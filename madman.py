@@ -333,8 +333,13 @@ def server_run(project_id: str, config_name: str) -> None:
 def server_deploy(project_id: str, config_name: str) -> None:
     assert_project_exists(project_id)
     config = madman_project_config(project_id, config_name)
+    repo_path = PROJECTS_ROOT / project_id
 
     undeploy_timer_and_service(project_id, config_name)
+
+    if 'pre-deploy' in config:
+        run_command_line(config['pre-deploy'], repo_path)
+
     write_systemd_service_config(project_id, config_name)
 
     if 'schedule' in config:

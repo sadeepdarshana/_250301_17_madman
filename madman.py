@@ -93,8 +93,17 @@ def get_systemd_id(project_id, config_name):
 
 
 def madman_project_config(project_id, config_name) -> Any | None:
-    config = json.loads((PROJECTS_ROOT / project_id / MADMAN_PROJECT_CONFIG_FILENAME).read_text())
-    return config[config_name]
+    print_info("Reading project config file")
+    try:
+        project_config = json.loads((PROJECTS_ROOT / project_id / MADMAN_PROJECT_CONFIG_FILENAME).read_text())
+    except:
+        fail("Failed to read and parse project file")
+
+    try:
+        config = project_config[config_name]
+    except:
+        fail(f"Config '{config_name}' not found in the project config")
+    return config
 
 
 def validate_madman_client_config() -> None:

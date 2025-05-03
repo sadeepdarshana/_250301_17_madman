@@ -88,9 +88,13 @@ def madman_client_config() -> Any | None:
     return config
 
 
-def madman_project_config(project_id) -> Any | None:
+def get_systemd_id(project_id, config_name):
+    return f"{project_id}_{config_name}"
+
+
+def madman_project_config(project_id, config_name) -> Any | None:
     config = json.loads((PROJECTS_ROOT / project_id / MADMAN_PROJECT_CONFIG_FILENAME).read_text())
-    return config
+    return config[config_name]
 
 
 def validate_madman_client_config() -> None:
@@ -106,8 +110,8 @@ def validate_madman_client_config() -> None:
         fail(f"host or username not found in Madman client config ({MADMAN_CLIENT_CONFIG})")
 
 
-def write_systemd_service_config(project_id: str):
-    project_config = madman_project_config(project_id)
+def write_systemd_service_config(project_id: str, config_name: str):
+    project_config = madman_project_config(project_id, config_name)
 
     run = project_config['run']
     is_scheduled_task = 'schedule' in project_config
@@ -131,11 +135,11 @@ def write_systemd_service_config(project_id: str):
             "WantedBy": "multi-user.target"
         }
 
-    write_systemd_config_to_file(config, f'{SYSTEMD_FILES_ROOT / project_id}.service')
+    write_systemd_config_to_file(config, f'{SYSTEMD_FILES_ROOT / get_systemd_id(project_id, config_name)}.service')
 
 
-def write_systemd_timer_config(project_id: str):
-    project_config = madman_project_config(project_id)
+def write_systemd_timer_config(project_id: str, config_name: str):
+    project_config = madman_project_config(project_id, config_name)
     schedule = project_config['schedule']
 
     config = {
@@ -149,7 +153,7 @@ def write_systemd_timer_config(project_id: str):
         }
     }
 
-    write_systemd_config_to_file(config, f'{SYSTEMD_FILES_ROOT / project_id}.timer')
+    write_systemd_config_to_file(config, f'{SYSTEMD_FILES_ROOT / get_systemd_id(project_id, config_name)}.timer')
 
 
 def convert_git_url(url: str) -> str | None:
@@ -194,13 +198,13 @@ def write_systemd_config_to_file(config: dict, path: str):
                 file.write(f"{key}={value}\n")
 
 
-def undeploy_timer_and_service(project_id):
-    run_command_line(f"systemctl disable {project_id}.timer", check=False, no_logs=True)
-    run_command_line(f"systemctl disable {project_id}.service", check=False, no_logs=True)
-    run_command_line(f"systemctl stop {project_id}.timer", check=False, no_logs=True)
-    run_command_line(f"systemctl stop {project_id}.service", check=False, no_logs=True)
-    delete_file(SYSTEMD_FILES_ROOT / f"{project_id}.service")
-    delete_file(SYSTEMD_FILES_ROOT / f"{project_id}.timer")
+def undeploy_timer_and_service(project_id, config_name):
+    run_command_line(f"systemctl disable {get_systemd_id(project_id, config_name)}.timer", check=False, no_logs=True)
+    run_command_line(f"systemctl disable {get_systemd_id(project_id, config_name)}.service", check=False, no_logs=True)
+    run_command_line(f"systemctl stop {get_systemd_id(project_id, config_name)}.timer", check=False, no_logs=True)
+    run_command_line(f"systemctl stop {get_systemd_id(project_id, config_name)}.service", check=False, no_logs=True)
+    delete_file(SYSTEMD_FILES_ROOT / f"{get_systemd_id(project_id, config_name)}.service")
+    delete_file(SYSTEMD_FILES_ROOT / f"{get_systemd_id(project_id, config_name)}.timer")
 
 
 def run_command_line(command: str, cwd=Path.home(), check=True, no_logs=False) -> CompletedProcess[bytes]:
@@ -307,34 +311,33 @@ def server_delete(project_id: str) -> None:
         fail(f"Failed to delete directory {repo_path}: {e}")
 
 
-def server_run(project_id: str) -> None:
+def server_run(project_id: str, config_name: str) -> None:
     assert_project_exists(project_id)
-    config = madman_project_config(project_id)
+    config = madman_project_config(project_id, config_name)
     repo_path = PROJECTS_ROOT / project_id
 
     run_command_line(config['run'], repo_path)
 
 
-def server_deploy(project_id: str) -> None:
+def server_deploy(project_id: str, config_name: str) -> None:
     assert_project_exists(project_id)
-    config = madman_project_config(project_id)
+    config = madman_project_config(project_id, config_name)
 
-    undeploy_timer_and_service(project_id)
-    write_systemd_service_config(project_id)
+    undeploy_timer_and_service(project_id, config_name)
+    write_systemd_service_config(project_id, config_name)
 
     if 'schedule' in config:
-        write_systemd_timer_config(project_id)
+        write_systemd_timer_config(project_id, config_name)
         run_command_line("systemctl daemon-reload")
-        run_command_line(f"systemctl enable --now {project_id}.timer")
+        run_command_line(f"systemctl enable --now {get_systemd_id(project_id, config_name)}.timer")
     else:
         run_command_line("systemctl daemon-reload")
-        run_command_line(f"systemctl enable --now {project_id}.service")
+        run_command_line(f"systemctl enable --now {get_systemd_id(project_id, config_name)}.service")
 
 
-def server_undeploy(project_id: str) -> None:
-    assert_project_exists(project_id)
-    undeploy_timer_and_service(project_id)
-    print_info(f"All deployments removed for {project_id}")
+def server_undeploy(project_id: str, config_name: str) -> None:
+    undeploy_timer_and_service(project_id, config_name)
+    print_info(f"All deployments removed for {project_id} {config_name}")
 
 
 def server_list() -> None:

@@ -229,7 +229,7 @@ def delete_file(path):
 def run_ssh(user: str, host: str, command: str) -> int:
     target = f"{user}@{host}"
     print_info(f"Running on {target}: {command}")
-    return run_command_line(f"ssh {target} {command}").returncode
+    return run_command_line(f"ssh {target} {command}", check=False).returncode
 
 
 # Print latest commit info
